@@ -1,0 +1,51 @@
+================================================================================
+                    VINALERT - BACKLOG Y FUTURAS MEJORAS
+================================================================================
+
+[PRIORITARIO 1] MAPA INTERACTIVO Y GIS
+--------------------------------------------------------------------------------
+- Integración de visor de mapas (Leaflet / Mapbox / Google Maps) en la sección
+  de Configuración y Sensores.
+- Dibujo y delimitación del polígono perimetral de la parcela sobre ortofoto satelital.
+- Georreferenciación visual de cada nodo de sensor (pin/marcador en el mapa).
+- Visualización de la última lectura o estado de humedad de cada sensor coloreado
+  sobre el mapa (mapa de calor o gradiente de humedad en la finca).
+
+[PRIORITARIO 2] EXPORTACIÓN E INFORMES OFICIALES (PDF / EXCEL)
+--------------------------------------------------------------------------------
+- Generación y descarga en PDF del "Cuaderno de Explotación Fitosanitario"
+  oficial listo para inspecciones agrarias (con productos, materias activas, dosis,
+  operadores y condiciones de viento registradas).
+- Exportación en PDF del informe de Balance Hídrico y Series Temporales para
+  asesores técnicos y enólogos.
+- Exportación en formato Excel (.xlsx) y CSV de las series históricas diarias
+  de suelo, clima y lecturas foliares.
+
+[MEJORA 3] SISTEMA DE ALERTAS Y NOTIFICACIONES AUTOMÁTICAS
+--------------------------------------------------------------------------------
+- Notificaciones vía Telegram Bot, Email o WhatsApp al superar umbrales críticos:
+  * Alerta de estrés hídrico: humedad media por debajo del umbral crítico.
+  * Alerta de heladas: temperatura prevista o detectada cercana a 0 °C.
+  * Alerta de viento para tratamientos: racha superior al límite legal de aplicación.
+  * Alerta de batería baja en sensores de campo.
+
+[MEJORA 4] COMPARADOR MULTI-PARCELA
+--------------------------------------------------------------------------------
+- Panel de control global para explotaciones con múltiples fincas o pagos.
+- Gráficas comparativas superpuestas entre diferentes parcelas (ej. comparar
+  variedades, tipos de suelo o patrones de riego en paralelo).
+- Resumen ejecutivo con ranking de fincas según necesidad de riego.
+
+[MEJORA 5] OPTIMIZACIÓN Y PAGINACIÓN PARA GRANDES VOLÚMENES
+--------------------------------------------------------------------------------
+- Paginación del lado del servidor para Tratamientos y Mediciones Foliares
+  en temporadas con cientos de registros.
+- Búsqueda por texto libre y filtros avanzados combinados en el cuaderno de campo.
+
+[MEJORA 6] DESPLIEGUE Y CONTENERIZACIÓN (PRODUCCIÓN)
+--------------------------------------------------------------------------------
+- Creación de Dockerfile y docker-compose.yml para orquestar:
+  * Backend: FastAPI + Gunicorn/Uvicorn workers.
+  * Frontend: Nginx sirviendo la SPA de React compilada.
+  * Base de datos: PostgreSQL con volumen persistente.
+  * Scheduler / Worker: Proceso cron autónomo para consolidación nocturna.

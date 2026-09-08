@@ -1,0 +1,192 @@
+@import "tailwindcss";
+
+@import "@fontsource/ibm-plex-sans/latin-400.css";
+@import "@fontsource/ibm-plex-sans/latin-500.css";
+@import "@fontsource/ibm-plex-sans/latin-600.css";
+@import "@fontsource/ibm-plex-mono/latin-400.css";
+@import "@fontsource/ibm-plex-mono/latin-500.css";
+@import "@fontsource/ibm-plex-mono/latin-600.css";
+
+/* ---------------------------------------------------------------------------
+   Viñalert — sistema visual
+   ---------------------------------------------------------------------------
+   Cinco tintas y nada mas. LOUSA es el suelo sobre el que ocurre todo; OSO es
+   la voz; VIÑA identifica a la marca; BROTE es el unico acento (lo que esta
+   vivo, lo que se puede pulsar); AMBAR avisa. SANGRE existe solo porque una
+   interfaz que mide cosas necesita decir "esto ha fallado" y la paleta de
+   marca no trae rojo: es la unica tinta derivada, y esta calibrada para
+   contrastar sobre LOUSA, no para gustar.
+
+   Los paneles no flotan: comparten linea. Por eso casi todas las rejillas se
+   montan con `gap-px` sobre un fondo LINEA — el hueco de un pixel ES el
+   borde, y asi nunca hay bordes dobles ni esquinas que no casan.
+--------------------------------------------------------------------------- */
+
+@theme {
+  /* --- Las cinco tintas de marca --- */
+  --color-lousa: #222a2e;
+  --color-oso: #efede6;
+  --color-vina: #4e7c4a;
+  --color-brote: #8fc93a;
+  --color-ambar: #e0913a;
+
+  /* --- Derivadas: OSO rebajado sobre LOUSA, para jerarquia de texto --- */
+  --color-oso-2: #9d9f9c; /* secundario: descripciones, unidades */
+  --color-oso-3: #787c7b; /* terciario: metadatos, marcas de tiempo */
+  --color-oso-4: #555b5c; /* apagado: placeholders, deshabilitado */
+
+  /* --- Derivadas: la rejilla --- */
+  --color-linea: #3b4144; /* la linea de 1px, por defecto */
+  --color-linea-viva: #565e60; /* linea con foco o al pasar por encima */
+  --color-alza: #2a3337; /* superficie que sube: input, celda activa */
+
+  /* --- Derivada: la unica tinta que no es de marca --- */
+  --color-sangre: #e2705a;
+
+  /* --- Tipografia: dos voces --- */
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  /* --- Radio cero. Sin excepciones, y por eso se anulan en el tema: cualquier
+         `rounded-*` que sobreviva en el codigo compila a 0 y no rompe la
+         disciplina de la rejilla. --- */
+  --radius-xs: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+  --radius-4xl: 0px;
+}
+
+@layer base {
+  html {
+    background-color: var(--color-lousa);
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-lousa);
+    color: var(--color-oso);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* El foco se ve siempre y se ve igual en todas partes: BROTE es lo vivo. */
+  :focus-visible {
+    outline: 2px solid var(--color-brote);
+    outline-offset: 1px;
+  }
+
+  ::selection {
+    background-color: var(--color-brote);
+    color: var(--color-lousa);
+  }
+
+  /* Las cifras se leen en columna: nunca bailan al actualizarse. */
+  input,
+  td,
+  th {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-lousa);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-linea);
+    border: 2px solid var(--color-lousa);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-linea-viva);
+  }
+}
+
+@layer components {
+  /* -------------------------------------------------------------------------
+     La marca.
+
+     Los seis PNG de la carpeta de logos son la misma silueta en seis tintas.
+     Guardarlos todos seria guardar seis veces lo mismo: aqui se usa uno solo
+     como MASCARA, y el color lo pone `background-color`. Asi la marca hereda
+     `currentColor` y aparece en cualquier tinta —dentro de un boton, calada
+     sobre un cuadrado OSO, al 6% como filigrana— sin un asset mas.
+  ------------------------------------------------------------------------- */
+  .marca {
+    display: inline-block;
+    aspect-ratio: 1431 / 2245;
+    background-color: currentColor;
+    -webkit-mask-image: url("/marca/marca.png");
+    mask-image: url("/marca/marca.png");
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    flex: none;
+  }
+
+  /* El rotulo: mono, versal, muy espaciado. Es la voz de la maquina —etiquetas,
+     unidades, estados, cabeceras de tabla, navegacion— frente a la voz humana,
+     que va en Sans. La caja del DOM conserva el texto tal cual se escribio; la
+     versal la pone el CSS. */
+  .rotulo {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    line-height: 1.2;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--color-oso-2);
+  }
+
+  /* Una filigrana de marca detras del vacio. Nunca compite: 6% sobre LOUSA
+     apenas se distingue de la nada, que es exactamente lo que debe pasar. */
+  .filigrana {
+    color: var(--color-oso);
+    opacity: 0.06;
+    pointer-events: none;
+  }
+
+  /* Leaflet trae su propio mundo visual. Se le baja al nuestro. */
+  .leaflet-container {
+    background: var(--color-lousa) !important;
+    font-family: var(--font-mono) !important;
+  }
+  .leaflet-tile {
+    filter: grayscale(0.55) brightness(0.72) contrast(1.12) saturate(0.7);
+  }
+  .leaflet-control-zoom a,
+  .leaflet-popup-content-wrapper,
+  .leaflet-popup-tip {
+    background: var(--color-lousa) !important;
+    color: var(--color-oso) !important;
+    border-color: var(--color-linea) !important;
+    border-radius: 0 !important;
+  }
+  .leaflet-control-attribution {
+    background: rgba(34, 42, 46, 0.85) !important;
+    color: var(--color-oso-4) !important;
+    font-size: 9px !important;
+  }
+  .leaflet-control-attribution a {
+    color: var(--color-oso-3) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

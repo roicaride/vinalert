@@ -1,0 +1,6 @@
+ALTER TABLE log_sensores ADD COLUMN IF NOT EXISTS sensor_id INTEGER REFERENCES sensores(id);
+
+ALTER TABLE log_sensores DROP COLUMN IF EXISTS nitrogeno;
+ALTER TABLE log_sensores DROP COLUMN IF EXISTS fosforo;
+ALTER TABLE log_sensores DROP COLUMN IF EXISTS potasio;
+ALTER TABLE log_sensores DROP COLUMN IF EXISTS ph;
