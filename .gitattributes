@@ -1,0 +1,13 @@
+# Normaliza los finales de línea: LF en el repositorio, nativos en disco.
+* text=auto
+
+# Scripts que deben conservar sus finales de línea sea cual sea el sistema.
+*.sh text eol=lf
+*.bat text eol=crlf
+
+# Binarios: nunca aplicar conversión de texto.
+*.png binary
+*.jpg binary
+*.xlsx binary
+*.zip binary
+*.db binary
