@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Area,
+  Bar,
   CartesianGrid,
   ComposedChart,
   Legend,
@@ -13,8 +14,9 @@ import {
 } from 'recharts';
 
 import { obtenerClimaDiario, obtenerSueloDiario } from '../api/analisis';
-import { obtenerHistorico } from '../api/estado';
+import { obtenerClimaHorario, obtenerHistorico } from '../api/estado';
 import { listarFoliar } from '../api/foliar';
+import { listarSensores } from '../api/sensores';
 import { listarTratamientos } from '../api/tratamientos';
 import ModalExportar from '../componentes/ModalExportar';
 import MensajeError from '../errores/MensajeError';
@@ -22,6 +24,11 @@ import { useParcela } from '../parcela/ParcelaContext';
 import Boton from '../ui/Boton';
 import { Cargando, Vacio } from '../ui/Estados';
 import { Cifra, Encabezado, Rejilla } from '../ui/Panel';
+import Detalle from './analisis/Detalle';
+import GraficaSuelo from './analisis/GraficaSuelo';
+import SelectorSensores from './analisis/SelectorSensores';
+import { diarioSuelo, horasSuelo, mediaPeriodoDiaria, mediaPeriodoHoras, rellenarDias } from './analisis/series';
+import { useSeleccionSensores } from './analisis/useSeleccionSensores';
 import { Leyenda, Marco, Pista } from './analisis/piezas';
 import { EJE, GRID, SERIES } from './analisis/tema';
 
@@ -49,9 +56,12 @@ function TarjetaKpi({ etiqueta, valor, detalle, tinta }) {
 export default function Analisis() {
   const { parcela } = useParcela();
   const [claveRango, setClaveRango] = useState('30d');
+  const [vista, setVista] = useState('resumen'); // 'resumen' | 'detalle'
   const [suelo, setSuelo] = useState(null);
   const [clima, setClima] = useState(null);
   const [historico, setHistorico] = useState(null);
+  // Lluvia/ET₀ hora a hora (solo en 48 h). null = Open-Meteo no respondio.
+  const [horario, setHorario] = useState(null);
   const [tratamientos, setTratamientos] = useState(null);
   const [foliar, setFoliar] = useState(null);
   const [mostrarModalExportar, setMostrarModalExportar] = useState(false);
@@ -64,6 +74,35 @@ export default function Analisis() {
   );
 
   const es48h = rangoActual.clave === '48h';
+  const vistaEfectiva = es48h ? 'resumen' : vista;
+
+  // Los sensores activos de la parcela, para el selector. Si fallan, el
+  // selector no sale y las graficas usan todos los que traigan los datos.
+  const [sensores, setSensores] = useState([]);
+  useEffect(() => {
+    let vigente = true;
+    listarSensores(parcela.id)
+      .then((lista) => {
+        if (vigente) setSensores(lista.filter((s) => s.activo).sort((a, b) => a.numero - b.numero));
+      })
+      .catch(() => {
+        if (vigente) setSensores([]);
+      });
+    return () => {
+      vigente = false;
+    };
+  }, [parcela.id]);
+  const seleccion = useSeleccionSensores(parcela.id, sensores);
+  // Sin lista de sensores, se usan todos los que vengan en los datos.
+  const idsElegidos = useMemo(() => {
+    if (sensores.length) return seleccion.ids;
+    const desdeDatos = es48h ? (historico ?? []).map((l) => l.sensor_id) : (suelo ?? []).map((f) => f.sensor_id);
+    return [...new Set(desdeDatos)];
+  }, [sensores.length, seleccion.ids, es48h, historico, suelo]);
+  const sensoresElegidos = sensores.filter((s) => idsElegidos.includes(s.id));
+  // Sin sensores (aun cargando o listarSensores fallo) no hay selector que
+  // ofrezca Comparar, asi que no se puede quedar en Comparar por lo guardado.
+  const modoSuelo = sensores.length ? seleccion.modo : 'media';
 
   useEffect(() => {
     let vigente = true;
@@ -75,10 +114,13 @@ export default function Analisis() {
         obtenerHistorico(parcela.id, 2000, 48),
         listarTratamientos(parcela.id),
         listarFoliar(parcela.id),
+        // Si Open-Meteo falla, las lecturas de los sensores se siguen viendo.
+        obtenerClimaHorario(parcela.id).catch(() => null),
       ])
-        .then(([h, t, f]) => {
+        .then(([h, t, f, hh]) => {
           if (vigente) {
             setHistorico(h);
+            setHorario(hh);
             setSuelo(null);
             setClima(null);
             setTratamientos(t);
@@ -140,34 +182,16 @@ export default function Analisis() {
           mapa.set(fechaIso, {
             fecha: fechaIso,
             fechaCorta,
-            humedades: [],
-            temperaturas_suelo: [],
             temp_media: log.temp_ambiente_c,
             humedad_aire: log.humedad_aire_pct,
-            precipitacion_mm: log.lluvia_mm,
-            et0_dia: log.et0,
             viento_ms: log.viento_ms,
           });
         }
         const fila = mapa.get(fechaIso);
-        if (log.humedad_suelo_pct != null) fila.humedades.push(log.humedad_suelo_pct);
-        if (log.temperatura_suelo != null) fila.temperaturas_suelo.push(log.temperatura_suelo);
         if (log.temp_ambiente_c != null && fila.temp_media == null) fila.temp_media = log.temp_ambiente_c;
-        if (log.lluvia_mm != null && fila.precipitacion_mm == null) fila.precipitacion_mm = log.lluvia_mm;
-        if (log.et0 != null && fila.et0_dia == null) fila.et0_dia = log.et0;
       });
 
-      const lista = Array.from(mapa.values())
-        .map((f) => ({
-          ...f,
-          humedad_media: f.humedades.length
-            ? Number((f.humedades.reduce((a, b) => a + b, 0) / f.humedades.length).toFixed(1))
-            : null,
-          temperatura_suelo: f.temperaturas_suelo.length
-            ? Number((f.temperaturas_suelo.reduce((a, b) => a + b, 0) / f.temperaturas_suelo.length).toFixed(1))
-            : null,
-        }))
-        .sort((a, b) => a.fecha.localeCompare(b.fecha));
+      const lista = Array.from(mapa.values()).sort((a, b) => a.fecha.localeCompare(b.fecha));
 
       if (lista.length === 0) return [];
       const minFecha = lista[0].fecha.slice(0, 10);
@@ -206,12 +230,8 @@ export default function Analisis() {
       return mapa.get(fechaStr);
     };
 
-    (suelo ?? []).forEach((s) => {
-      const fila = obtenerFila(s.fecha);
-      fila.humedad_media = s.humedad_media;
-      fila.humedad_min = s.humedad_min;
-      fila.humedad_max = s.humedad_max;
-      fila.temperatura_suelo = s.temperatura_media;
+    diarioSuelo(suelo ?? [], idsElegidos).forEach((d) => {
+      Object.assign(obtenerFila(d.fecha), d);
     });
 
     (clima ?? []).forEach((c) => {
@@ -222,6 +242,17 @@ export default function Analisis() {
       fila.precipitacion_mm = c.precipitacion_total_mm;
       fila.et0_dia = c.et0_total_dia;
       fila.radiacion_mj = c.radiacion_total_mj_m2;
+      // Para la vista Detalle.
+      fila.hr_media = c.humedad_relativa_media;
+      fila.hr_max = c.humedad_relativa_max;
+      fila.hr_min = c.humedad_relativa_min;
+      fila.hoja_mojada = c.humectacion_foliar_pct;
+      fila.horas_sol = c.horas_sol != null ? Number(c.horas_sol.toFixed(1)) : null;
+      fila.viento_media = c.viento_vel_media;
+      fila.viento_racha = c.viento_racha_max;
+      // Open-Meteo da m³/m³ (0.199); las sondas, % (19.9).
+      fila.suelo_modelo_hum =
+        c.suelo_modelo_humedad != null ? Number((c.suelo_modelo_humedad * 100).toFixed(1)) : null;
     });
 
     const todasLasFechas = Array.from(mapa.keys()).sort();
@@ -248,26 +279,40 @@ export default function Analisis() {
       }
     });
 
-    return Array.from(mapa.values()).sort((a, b) => a.fecha.localeCompare(b.fecha));
-  }, [es48h, historico, suelo, clima, tratamientos, foliar]);
+    return rellenarDias(Array.from(mapa.values()).sort((a, b) => a.fecha.localeCompare(b.fecha)));
+  }, [es48h, historico, suelo, clima, tratamientos, foliar, idsElegidos]);
+
+  // Las horas ya pasadas del horario de Open-Meteo, con los mismos nombres
+  // que usa la grafica de clima en modo diario.
+  const datosHorarios = useMemo(
+    () =>
+      (horario ?? [])
+        .filter((h) => !h.prevision)
+        .map((h) => ({
+          fecha: h.fecha_hora,
+          precipitacion_mm: h.lluvia_mm,
+          et0_dia: h.et0_mm,
+          temp_media: h.temp_c,
+        })),
+    [horario],
+  );
+
+  const horasSueloSel = useMemo(() => horasSuelo(historico ?? [], idsElegidos), [historico, idsElegidos]);
 
   // Cálculos de KPIs del período
   const kpis = useMemo(() => {
     if (es48h) {
-      const items = datosFusionados;
-      const totalLluvia = items.reduce((acc, d) => acc + (d.precipitacion_mm ?? 0), 0);
-      const totalEt0 = items.reduce((acc, d) => acc + (d.et0_dia ?? 0), 0);
-      const balance = totalLluvia - totalEt0;
+      // Lluvia y ET₀ de cada hora, sumadas una vez. Antes se sumaba la cifra
+      // pegada a cada lectura: los 15 min anteriores a la ultima consulta del
+      // clima, repetidos en todas las lecturas cercanas.
+      const sumar = (clave) =>
+        horario === null ? null : datosHorarios.reduce((acc, d) => acc + (d[clave] ?? 0), 0);
+      const totalLluvia = sumar('precipitacion_mm');
+      const totalEt0 = sumar('et0_dia');
+      const balance = totalLluvia == null || totalEt0 == null ? null : totalLluvia - totalEt0;
 
-      const humValidas = items.filter((d) => d.humedad_media != null);
-      const mediaHumedad = humValidas.length
-        ? humValidas.reduce((acc, d) => acc + d.humedad_media, 0) / humValidas.length
-        : null;
-
-      const tempValidas = items.filter((d) => d.temperatura_suelo != null);
-      const mediaTempSuelo = tempValidas.length
-        ? tempValidas.reduce((acc, d) => acc + d.temperatura_suelo, 0) / tempValidas.length
-        : null;
+      const mediaHumedad = mediaPeriodoHoras(historico ?? [], idsElegidos, 'humedad_suelo_pct');
+      const mediaTempSuelo = mediaPeriodoHoras(historico ?? [], idsElegidos, 'temperatura_suelo');
 
       return {
         totalLluvia,
@@ -283,15 +328,8 @@ export default function Analisis() {
     const totalEt0 = (clima ?? []).reduce((acc, c) => acc + (c.et0_total_dia ?? 0), 0);
     const balance = totalLluvia - totalEt0;
 
-    const humValidas = (suelo ?? []).filter((s) => s.humedad_media != null);
-    const mediaHumedad = humValidas.length
-      ? humValidas.reduce((acc, s) => acc + s.humedad_media, 0) / humValidas.length
-      : null;
-
-    const tempValidas = (suelo ?? []).filter((s) => s.temperatura_media != null);
-    const mediaTempSuelo = tempValidas.length
-      ? tempValidas.reduce((acc, s) => acc + s.temperatura_media, 0) / tempValidas.length
-      : null;
+    const mediaHumedad = mediaPeriodoDiaria(suelo ?? [], idsElegidos, 'humedad_media');
+    const mediaTempSuelo = mediaPeriodoDiaria(suelo ?? [], idsElegidos, 'temperatura_media');
 
     return {
       totalLluvia,
@@ -301,7 +339,7 @@ export default function Analisis() {
       mediaTempSuelo,
       detallePeriodo: `En los últimos ${rangoActual.dias} días`,
     };
-  }, [es48h, datosFusionados, clima, suelo, rangoActual.dias]);
+  }, [es48h, datosHorarios, horario, clima, suelo, rangoActual.dias, historico, idsElegidos]);
 
   const hayDatosFoliar = useMemo(() => {
     return datosFusionados.some((d) => d.foliar_nbi != null || d.foliar_chl != null || d.foliar_flav != null);
@@ -388,7 +426,33 @@ export default function Analisis() {
             </button>
           ))}
         </div>
+
+        {/* Resumen = lo de siempre; Detalle = todo el clima diario. En 48 h
+            no hay dias que resumir, asi que Detalle no se ofrece. */}
+        <span className="rotulo sm:ml-4">Vista</span>
+        <div className="flex border border-linea">
+          {[
+            ['resumen', 'Resumen'],
+            ['detalle', 'Detalle'],
+          ].map(([clave, etiqueta]) => (
+            <button
+              key={clave}
+              type="button"
+              onClick={() => setVista(clave)}
+              disabled={clave === 'detalle' && es48h}
+              title={clave === 'detalle' && es48h ? 'Solo con 7 días o más: son datos diarios' : undefined}
+              aria-pressed={vistaEfectiva === clave}
+              className={`border-r border-linea px-3.5 py-1.5 font-mono text-[10px] font-medium tracking-[0.16em] whitespace-nowrap uppercase transition-colors last:border-r-0 disabled:cursor-not-allowed disabled:opacity-40 ${
+                vistaEfectiva === clave ? 'bg-oso text-lousa' : 'text-oso-3 hover:bg-lousa hover:text-oso'
+              }`}
+            >
+              {etiqueta}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {sensores.length > 0 && <SelectorSensores sensores={sensores} seleccion={seleccion} />}
 
       {error && (
         <div className="border-b border-linea px-6 py-3">
@@ -427,7 +491,7 @@ export default function Analisis() {
                 etiqueta="Balance hídrico"
                 valor={`${kpis.balance > 0 ? '+' : ''}${fmt(kpis.balance, 'mm')}`}
                 detalle="Lluvia − ET₀"
-                tinta={kpis.balance < 0 ? 'text-ambar' : 'text-brote'}
+                tinta={kpis.balance == null ? 'text-oso' : kpis.balance < 0 ? 'text-ambar' : 'text-brote'}
               />
               <TarjetaKpi
                 etiqueta="Humedad suelo media"
@@ -442,186 +506,175 @@ export default function Analisis() {
             </Rejilla>
           </section>
 
-          {/* -------------------------------------------------------------- */}
-          {/* 1. El suelo.                                                    */}
-          {/* -------------------------------------------------------------- */}
-          <Marco
-            titulo="Temperatura y humedad del suelo"
-            descripcion={
-              es48h
-                ? 'Cada lectura de los sensores, punto a punto: humedad (%) y temperatura del suelo (°C).'
-                : 'Humedad media (%) y temperatura del suelo (°C), un valor por día.'
-            }
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={datosFusionados} margin={{ top: 5, right: 12, left: -12, bottom: 0 }}>
-                <CartesianGrid {...GRID} />
-                <XAxis dataKey="fecha" tickFormatter={formatearEjeX} minTickGap={28} {...EJE} />
-                <YAxis yAxisId="izq" unit="%" domain={['auto', 'auto']} {...EJE} />
-                <YAxis yAxisId="der" orientation="right" unit="°C" domain={['auto', 'auto']} {...EJE} />
-                <Tooltip content={pista} cursor={{ stroke: '#565e60', strokeDasharray: '3 3' }} />
-                <Legend content={<Leyenda />} />
+          {vistaEfectiva === 'detalle' ? (
+            <Detalle
+              datos={datosFusionados}
+              formatearEjeX={formatearEjeX}
+              pista={pista}
+              puntos={rangoActual.dias <= 30 ? { r: 2 } : false}
+              modo={modoSuelo}
+              sensores={sensoresElegidos}
+            />
+          ) : (
+            <>
+            {/* -------------------------------------------------------------- */}
+            {/* 1. El suelo.                                                    */}
+            {/* -------------------------------------------------------------- */}
+            <GraficaSuelo
+              es48h={es48h}
+              modo={modoSuelo}
+              sensores={sensoresElegidos}
+              diario={datosFusionados}
+              horas={horasSueloSel}
+              formatearEjeX={formatearEjeX}
+              formatearTooltip={formatearTooltip}
+              puntos={es48h ? { r: 3 } : rangoActual.dias <= 30 ? { r: 2 } : false}
+            />
 
-                <Line
-                  yAxisId="izq"
-                  type="monotone"
-                  dataKey="humedad_media"
-                  name={es48h ? 'Humedad suelo real (%)' : 'Humedad suelo (%)'}
-                  stroke={SERIES.agua}
-                  strokeWidth={2}
-                  dot={es48h ? { r: 3 } : rangoActual.dias <= 30 ? { r: 2 } : false}
-                  activeDot={{ r: 5, strokeWidth: 2, stroke: '#222a2e' }}
-                />
-                <Line
-                  yAxisId="der"
-                  type="monotone"
-                  dataKey="temperatura_suelo"
-                  name={es48h ? 'Temp. suelo real (°C)' : 'Temp. suelo (°C)'}
-                  stroke={SERIES.calor}
-                  strokeWidth={2}
-                  strokeDasharray="5 3"
-                  dot={es48h ? { r: 3 } : false}
-                  activeDot={{ r: 5, strokeWidth: 2, stroke: '#222a2e' }}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </Marco>
-
-          {/* -------------------------------------------------------------- */}
-          {/* 2. El agua que entra contra la que se va, y el aire.            */}
-          {/* -------------------------------------------------------------- */}
-          <Marco
-            titulo="Clima y balance hídrico"
-            descripcion={
-              es48h
-                ? 'Lluvia, ET₀ y temperatura del aire punto a punto en las últimas 48 horas.'
-                : 'Lluvia diaria (mm) contra la evapotranspiración ET₀ (mm), con las temperaturas del aire.'
-            }
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={datosFusionados} margin={{ top: 5, right: 12, left: -12, bottom: 0 }}>
-                <CartesianGrid {...GRID} />
-                <XAxis dataKey="fecha" tickFormatter={formatearEjeX} minTickGap={28} {...EJE} />
-                <YAxis yAxisId="agua" unit="mm" domain={['auto', 'auto']} {...EJE} />
-                <YAxis yAxisId="temp" orientation="right" unit="°C" domain={['auto', 'auto']} {...EJE} />
-                <Tooltip content={pista} cursor={{ stroke: '#565e60', strokeDasharray: '3 3' }} />
-                <Legend content={<Leyenda />} />
-
-                <Area
-                  yAxisId="agua"
-                  type="monotone"
-                  dataKey="precipitacion_mm"
-                  name="Lluvia (mm)"
-                  stroke={SERIES.agua}
-                  fill={SERIES.agua}
-                  fillOpacity={0.18}
-                  strokeWidth={2}
-                  dot={es48h ? { r: 3 } : rangoActual.dias <= 30 ? { r: 2 } : false}
-                  activeDot={{ r: 5, strokeWidth: 2, stroke: '#222a2e' }}
-                />
-                <Line
-                  yAxisId="agua"
-                  type="monotone"
-                  dataKey="et0_dia"
-                  name="ET₀ (mm)"
-                  stroke={SERIES.vino}
-                  strokeWidth={2}
-                  dot={es48h ? { r: 3 } : rangoActual.dias <= 30 ? { r: 2 } : false}
-                  activeDot={{ r: 5, strokeWidth: 2, stroke: '#222a2e' }}
-                />
-                <Line
-                  yAxisId="temp"
-                  type="monotone"
-                  dataKey="temp_media"
-                  name={es48h ? 'Temp. aire (°C)' : 'Temp. media (°C)'}
-                  stroke={SERIES.calor}
-                  strokeWidth={2}
-                  dot={es48h ? { r: 3 } : false}
-                  activeDot={{ r: 5, strokeWidth: 2, stroke: '#222a2e' }}
-                />
-                {!es48h && (
-                  <>
-                    {/* Máxima y mínima son el MISMO tono que la media, más claro
-                        y más oscuro: se leen como el rango de una sola cosa, no
-                        como tres variables distintas. */}
-                    <Line
-                      yAxisId="temp"
-                      type="monotone"
-                      dataKey="temp_max"
-                      name="Temp. máx (°C)"
-                      stroke={SERIES.calorAlto}
-                      strokeWidth={1}
-                      strokeDasharray="2 3"
-                      dot={false}
-                    />
-                    <Line
-                      yAxisId="temp"
-                      type="monotone"
-                      dataKey="temp_min"
-                      name="Temp. mín (°C)"
-                      stroke={SERIES.calorBajo}
-                      strokeWidth={1}
-                      strokeDasharray="2 3"
-                      dot={false}
-                    />
-                  </>
-                )}
-              </ComposedChart>
-            </ResponsiveContainer>
-          </Marco>
-
-          {/* -------------------------------------------------------------- */}
-          {/* 3. La hoja. Solo si hay algo que enseñar.                       */}
-          {/* -------------------------------------------------------------- */}
-          {hayDatosFoliar && (
+            {/* -------------------------------------------------------------- */}
+            {/* 2. El agua que entra contra la que se va, y el aire.            */}
+            {/* -------------------------------------------------------------- */}
             <Marco
-              titulo="Mediciones foliares"
-              descripcion="Clorofila, flavonoides y balance de nitrógeno (NBI) medidos con el Dualex."
-              alto="h-72"
+              titulo="Clima y balance hídrico"
+              descripcion={
+                es48h
+                  ? 'Lluvia y ET₀ de cada hora (Open-Meteo) y temperatura del aire, en las últimas 48 horas.'
+                  : 'Lluvia diaria (mm) contra la evapotranspiración ET₀ (mm), con las temperaturas del aire.'
+              }
             >
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={datosFusionados.filter(
-                    (d) => d.foliar_nbi != null || d.foliar_chl != null || d.foliar_flav != null,
-                  )}
-                  margin={{ top: 5, right: 12, left: -12, bottom: 0 }}
-                >
+                <ComposedChart data={es48h ? datosHorarios : datosFusionados} margin={{ top: 5, right: 12, left: -12, bottom: 0 }}>
                   <CartesianGrid {...GRID} />
                   <XAxis dataKey="fecha" tickFormatter={formatearEjeX} minTickGap={28} {...EJE} />
-                  <YAxis domain={['auto', 'auto']} {...EJE} />
+                  <YAxis yAxisId="agua" unit="mm" domain={['auto', 'auto']} {...EJE} />
+                  <YAxis yAxisId="temp" orientation="right" unit="°C" domain={['auto', 'auto']} {...EJE} />
                   <Tooltip content={pista} cursor={{ stroke: '#565e60', strokeDasharray: '3 3' }} />
                   <Legend content={<Leyenda />} />
 
+                  {es48h ? (
+                    // Cada barra es la lluvia de una hora: se ve cuando llovio
+                    // y cuanto, sin inventar una curva entre horas.
+                    <Bar yAxisId="agua" dataKey="precipitacion_mm" name="Lluvia por hora (mm)"
+                      fill={SERIES.agua} maxBarSize={10} />
+                  ) : (
+                    <Area
+                      yAxisId="agua"
+                      type="monotone"
+                      dataKey="precipitacion_mm"
+                      name="Lluvia (mm)"
+                      stroke={SERIES.agua}
+                      fill={SERIES.agua}
+                      fillOpacity={0.18}
+                      strokeWidth={2}
+                      dot={rangoActual.dias <= 30 ? { r: 2 } : false}
+                      activeDot={{ r: 5, strokeWidth: 2, stroke: '#222a2e' }}
+                    />
+                  )}
                   <Line
+                    yAxisId="agua"
                     type="monotone"
-                    dataKey="foliar_nbi"
-                    name="NBI (balance de nitrógeno)"
-                    stroke={SERIES.agua}
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                    activeDot={{ r: 6, strokeWidth: 2, stroke: '#222a2e' }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="foliar_chl"
-                    name="Clorofila"
-                    stroke={SERIES.hoja}
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                    activeDot={{ r: 6, strokeWidth: 2, stroke: '#222a2e' }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="foliar_flav"
-                    name="Flavonoides"
+                    dataKey="et0_dia"
+                    name="ET₀ (mm)"
                     stroke={SERIES.vino}
                     strokeWidth={2}
-                    dot={{ r: 4 }}
-                    activeDot={{ r: 6, strokeWidth: 2, stroke: '#222a2e' }}
+                    dot={es48h ? { r: 3 } : rangoActual.dias <= 30 ? { r: 2 } : false}
+                    activeDot={{ r: 5, strokeWidth: 2, stroke: '#222a2e' }}
                   />
-                </LineChart>
+                  <Line
+                    yAxisId="temp"
+                    type="monotone"
+                    dataKey="temp_media"
+                    name={es48h ? 'Temp. aire (°C)' : 'Temp. media (°C)'}
+                    stroke={SERIES.calor}
+                    strokeWidth={2}
+                    dot={es48h ? { r: 3 } : false}
+                    activeDot={{ r: 5, strokeWidth: 2, stroke: '#222a2e' }}
+                  />
+                  {!es48h && (
+                    <>
+                      {/* Máxima y mínima son el MISMO tono que la media, más claro
+                          y más oscuro: se leen como el rango de una sola cosa, no
+                          como tres variables distintas. */}
+                      <Line
+                        yAxisId="temp"
+                        type="monotone"
+                        dataKey="temp_max"
+                        name="Temp. máx (°C)"
+                        stroke={SERIES.calorAlto}
+                        strokeWidth={1}
+                        strokeDasharray="2 3"
+                        dot={false}
+                      />
+                      <Line
+                        yAxisId="temp"
+                        type="monotone"
+                        dataKey="temp_min"
+                        name="Temp. mín (°C)"
+                        stroke={SERIES.calorBajo}
+                        strokeWidth={1}
+                        strokeDasharray="2 3"
+                        dot={false}
+                      />
+                    </>
+                  )}
+                </ComposedChart>
               </ResponsiveContainer>
             </Marco>
+
+            {/* -------------------------------------------------------------- */}
+            {/* 3. La hoja. Solo si hay algo que enseñar.                       */}
+            {/* -------------------------------------------------------------- */}
+            {hayDatosFoliar && (
+              <Marco
+                titulo="Mediciones foliares"
+                descripcion="Clorofila, flavonoides y balance de nitrógeno (NBI) medidos con el Dualex."
+                alto="h-72"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={datosFusionados.filter(
+                      (d) => d.foliar_nbi != null || d.foliar_chl != null || d.foliar_flav != null,
+                    )}
+                    margin={{ top: 5, right: 12, left: -12, bottom: 0 }}
+                  >
+                    <CartesianGrid {...GRID} />
+                    <XAxis dataKey="fecha" tickFormatter={formatearEjeX} minTickGap={28} {...EJE} />
+                    <YAxis domain={['auto', 'auto']} {...EJE} />
+                    <Tooltip content={pista} cursor={{ stroke: '#565e60', strokeDasharray: '3 3' }} />
+                    <Legend content={<Leyenda />} />
+
+                    <Line
+                      type="monotone"
+                      dataKey="foliar_nbi"
+                      name="NBI (balance de nitrógeno)"
+                      stroke={SERIES.agua}
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
+                      activeDot={{ r: 6, strokeWidth: 2, stroke: '#222a2e' }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="foliar_chl"
+                      name="Clorofila"
+                      stroke={SERIES.hoja}
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
+                      activeDot={{ r: 6, strokeWidth: 2, stroke: '#222a2e' }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="foliar_flav"
+                      name="Flavonoides"
+                      stroke={SERIES.vino}
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
+                      activeDot={{ r: 6, strokeWidth: 2, stroke: '#222a2e' }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </Marco>
+            )}
+            </>
           )}
         </>
       )}

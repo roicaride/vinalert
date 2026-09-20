@@ -21,7 +21,9 @@
  *   AGUA   azul   — humedad del suelo, lluvia, NBI
  *   CALOR  ambar  — temperatura, en rampa clara/media/oscura para max/med/min
  *   VINO   granate— ET₀, flavonoides
- *   HOJA   lima   — clorofila
+ *   HOJA   lima   — clorofila, hoja mojada
+ *   VIENTO violeta — viento medio y racha (grafica de Detalle, sola)
+ *   MODELO gris    — lo que calcula Open-Meteo, como referencia
  */
 
 export const MONO = "'IBM Plex Mono', ui-monospace, monospace";
@@ -33,6 +35,14 @@ export const SERIES = {
   calorBajo: '#AA6C18',
   vino: '#C1558A',
   hoja: '#69A81C',
+  // Rampas de un solo tono para maximo/minimo de una misma magnitud: se leen
+  // como el rango de una cosa, no como variables distintas.
+  aguaAlto: '#7BB1E9',
+  aguaBajo: '#3E7FC3',
+  viento: '#A979DD',
+  vientoAlto: '#C2A2E9',
+  // Una referencia calculada (no medida) va en gris: acompana, no compite.
+  modelo: '#787C7B',
 };
 
 const LINEA = '#3b4144';
@@ -49,3 +59,21 @@ export const EJE = {
   tickLine: false,
   axisLine: { stroke: LINEA },
 };
+
+/**
+ * Cada sensor tiene SU color, el mismo en todas las graficas, por su numero
+ * (S1…S6, y vuelta a empezar). La profundidad va en el trazo: codificacion
+ * secundaria, para que dos colores cercanos se sigan distinguiendo.
+ */
+export const COLORES_SENSOR = ['#4B98E3', '#C7832D', '#C1558A', '#69A81C', '#A979DD', '#27A6A3'];
+
+export function colorSensor(numero) {
+  return COLORES_SENSOR[(Math.max(1, numero) - 1) % COLORES_SENSOR.length];
+}
+
+/** 20 cm continuo, 40 cm discontinuo, 60 cm punteado; el resto, continuo. */
+export function trazoProfundidad(cm) {
+  if (cm === 40) return '6 3';
+  if (cm === 60) return '2 3';
+  return undefined;
+}

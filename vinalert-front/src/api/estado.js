@@ -12,3 +12,12 @@ export async function obtenerHistorico(parcelaId, limite = 15, horas = null) {
   return data;
 }
 
+
+/**
+ * Lluvia, probabilidad de lluvia, ET₀ y temperatura de cada hora: 48 h hacia
+ * atras y 48 h de prevision (`prevision: true`). Open-Meteo, sin guardar.
+ */
+export async function obtenerClimaHorario(parcelaId) {
+  const { data } = await cliente.get(`/parcelas/${parcelaId}/clima/horario`);
+  return data;
+}

@@ -15,7 +15,6 @@ SEMILLA_ADMIN_PASSWORD y SEMILLA_AGRICULTOR_PASSWORD.
     SEMILLA_AGRICULTOR_PASSWORD  (por defecto: vinalert123)
 """
 import os
-import sys
 from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
@@ -88,17 +87,6 @@ def sembrar():
                 tipo_cultivo="Viñedo",
                 variedad="Albariño",
                 superficie_total_m2=15000,
-                cobertura_cultivo_pct=75,
-                porcentaje_cobertura_suelo=60,
-                profundidad_raices_cm=80,
-                umbral_humedad_critico_pct=22.0,
-                capacidad_campo_suelo=35.0,
-                kc_actual=0.75,
-                distancia_filas_m=2.5,
-                distancia_plantas_m=1.2,
-                caudal_gotero_lph=2.2,
-                num_goteros_planta=2,
-                eficiencia_riego_pct=90.0,
                 latitud=42.3150,
                 longitud=-8.6120,
             )

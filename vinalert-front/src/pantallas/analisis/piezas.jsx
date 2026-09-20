@@ -21,8 +21,8 @@ export function Pista({ active, payload, label, formatearEtiqueta }) {
         <tbody>
           {payload
             .filter((s) => s.value != null)
-            .map((s) => (
-              <tr key={s.dataKey}>
+            .map((s, i) => (
+              <tr key={`${s.name}-${i}`}>
                 <td className="py-0.5 pr-3">
                   <span className="flex items-center gap-2">
                     <span
@@ -63,7 +63,7 @@ export function Leyenda({ payload }) {
 /** El panel de una grafica: titulo, que se esta viendo, y el lienzo. */
 export function Marco({ titulo, descripcion, alto = 'h-80', children }) {
   return (
-    <section className="border-b border-linea">
+    <section className="border-b border-linea bg-lousa">
       <header className="border-b border-linea px-6 py-3">
         <h3 className="rotulo">{titulo}</h3>
         <p className="mt-1.5 text-sm text-oso-2">{descripcion}</p>

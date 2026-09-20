@@ -23,7 +23,7 @@ def test_solo_se_modifican_los_campos_enviados(client, auth_headers, parcela_id)
     """Trampa: sembrar varios campos y enviar uno; el resto debe sobrevivir."""
     client.patch(
         f"/parcelas/{parcela_id}",
-        json={"variedad": "Albarino", "kc_actual": 0.75, "tipo_cultivo": "Vinedo"},
+        json={"variedad": "Albarino", "superficie_total_m2": 15000.0, "tipo_cultivo": "Vinedo"},
         headers=auth_headers,
     )
 
@@ -32,7 +32,7 @@ def test_solo_se_modifican_los_campos_enviados(client, auth_headers, parcela_id)
     cuerpo = resp.json()
     assert cuerpo["nombre"] == "Renombrada"
     assert cuerpo["variedad"] == "Albarino", "un PATCH parcial ha borrado otro campo"
-    assert cuerpo["kc_actual"] == 0.75
+    assert cuerpo["superficie_total_m2"] == 15000.0
     assert cuerpo["tipo_cultivo"] == "Vinedo"
 
 

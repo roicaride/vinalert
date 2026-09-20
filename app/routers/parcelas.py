@@ -1,8 +1,9 @@
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Any, List, Optional
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func
 
 from sqlalchemy.orm import Session
 
@@ -16,7 +17,6 @@ from ..models import (
     Parcela,
     ParcelaUsuario,
     Sensor,
-    SueloDiario,
     Tratamiento,
     Usuario,
 )
@@ -27,10 +27,10 @@ from ..schemas import (
     ParcelaCreate,
     ParcelaResp,
     ParcelaUpdate,
-    LogClimaResp,
-    SueloDiarioResp,
+    SueloDiarioSensorResp,
 )
 from .sensores import _obtener_resumen
+from ..services.weather import TZ_LOCAL
 
 router = APIRouter(tags=["parcelas"])
 
@@ -156,7 +156,6 @@ def borrar_parcela(
     db.query(Sensor).filter(Sensor.parcela_id == parcela_id).delete(synchronize_session=False)
     db.query(LogClima).filter(LogClima.parcela_id == parcela_id).delete(synchronize_session=False)
     db.query(ClimaDiario).filter(ClimaDiario.parcela_id == parcela_id).delete(synchronize_session=False)
-    db.query(SueloDiario).filter(SueloDiario.parcela_id == parcela_id).delete(synchronize_session=False)
     db.query(Tratamiento).filter(Tratamiento.parcela_id == parcela_id).delete(synchronize_session=False)
     db.query(LecturaFoliar).filter(LecturaFoliar.parcela_id == parcela_id).delete(synchronize_session=False)
     db.query(ParcelaUsuario).filter(ParcelaUsuario.parcela_id == parcela_id).delete(synchronize_session=False)
@@ -184,6 +183,15 @@ def obtener_dashboard(
         "estado_suelo": resumen_suelo,
         "clima_actual": u_clima,
     }
+
+
+# El resto del clima de cada lectura, con el mismo nombre que en LogClima.
+# No sale en la tabla de Estado, pero va a la exportacion a Excel/CSV.
+_CLIMA_EXTRA = (
+    "uv_index", "duracion_sol_s",
+    "suelo_temp_0cm", "suelo_temp_6cm", "suelo_temp_18cm",
+    "suelo_hum_0_1cm", "suelo_hum_1_3cm", "suelo_hum_3_9cm", "suelo_hum_9_27cm",
+)
 
 
 @router.get("/parcelas/{parcela_id}/historico", response_model=List[LogSensorResp])
@@ -239,6 +247,7 @@ def obtener_historico(
             "vpd_kpa": clima_cercano.vpd_kpa if clima_cercano else None,
             "punto_rocio_c": clima_cercano.punto_rocio_c if clima_cercano else None,
             "nubosidad_pct": clima_cercano.nubosidad_pct if clima_cercano else None,
+            **{campo: getattr(clima_cercano, campo) if clima_cercano else None for campo in _CLIMA_EXTRA},
         })
 
     return resultado
@@ -262,17 +271,54 @@ def obtener_clima_diario(
     return filas[::-1]
 
 
-@router.get("/parcelas/{parcela_id}/suelo/diario", response_model=List[SueloDiarioResp])
+@router.get("/parcelas/{parcela_id}/suelo/diario", response_model=List[SueloDiarioSensorResp])
 def obtener_suelo_diario(
     parcela_id: int,
-    dias: Optional[int] = None,
-    limite: int = Query(365, ge=1, le=5000),
+    dias: int = Query(30, ge=1, le=366),
     current_user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Any:
+    """
+    Una fila por dia y sensor activo, desde las 00:00 de hace `dias` dias
+    hasta ahora (hoy incluido). Se agrupa al momento desde log_sensores: no
+    hay tabla de agregados que pueda quedarse sin rellenar. `fecha_hora` ya
+    esta en hora de Madrid, asi que date() da el dia civil espanol.
+    """
     parcela_con_lectura(parcela_id, current_user, db)
-    q = db.query(SueloDiario).filter(SueloDiario.parcela_id == parcela_id)
-    if dias is not None:
-        q = q.filter(SueloDiario.fecha >= date.today() - timedelta(days=dias))
-    filas = q.order_by(SueloDiario.fecha.desc()).limit(limite).all()
-    return filas[::-1]
+    hoy = datetime.now(TZ_LOCAL).date()
+    desde = datetime.combine(hoy - timedelta(days=dias), time.min)
+    # Cota superior: una lectura con la fecha mal puesta en el futuro no debe
+    # aparecer como si fuera de un dia que todavia no ha pasado.
+    hasta = datetime.combine(hoy + timedelta(days=1), time.min)
+    dia = func.date(LogSensor.fecha_hora)
+
+    filas = (
+        db.query(
+            dia.label("fecha"),
+            Sensor.id, Sensor.numero, Sensor.profundidad_cm,
+            func.avg(LogSensor.humedad_suelo_pct), func.max(LogSensor.humedad_suelo_pct),
+            func.min(LogSensor.humedad_suelo_pct),
+            func.avg(LogSensor.temperatura_suelo), func.max(LogSensor.temperatura_suelo),
+            func.min(LogSensor.temperatura_suelo),
+            func.count(LogSensor.id),
+        )
+        .join(Sensor, LogSensor.sensor_id == Sensor.id)
+        .filter(
+            LogSensor.parcela_id == parcela_id,
+            Sensor.activo.is_(True),
+            LogSensor.fecha_hora >= desde,
+            LogSensor.fecha_hora < hasta,
+        )
+        .group_by(dia, Sensor.id, Sensor.numero, Sensor.profundidad_cm)
+        .order_by(dia, Sensor.numero)
+        .all()
+    )
+    return [
+        SueloDiarioSensorResp(
+            fecha=f[0], sensor_id=f[1], sensor_numero=f[2], profundidad_cm=f[3],
+            humedad_media=f[4], humedad_max=f[5], humedad_min=f[6],
+            temperatura_media=f[7], temperatura_max=f[8], temperatura_min=f[9],
+            n_lecturas=f[10],
+        )
+        for f in filas
+    ]

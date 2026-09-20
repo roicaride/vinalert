@@ -181,6 +181,25 @@
   }
 }
 
+/* La portada enciende su lista de nodos uno a uno, como un aparato que
+   arranca. Es el unico movimiento de la web y dura menos de un segundo. */
+@keyframes encender {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

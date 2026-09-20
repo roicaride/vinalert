@@ -3,7 +3,7 @@ from datetime import date
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from app.models import ClimaDiario, SueloDiario
+from app.models import ClimaDiario
 
 
 def test_clima_diario_se_guarda(db_session, parcela_id):
@@ -37,30 +37,6 @@ def test_clima_diario_no_admite_dos_filas_del_mismo_dia(db_session, parcela_id):
     db_session.add(ClimaDiario(parcela_id=parcela_id, fecha=date(2026, 8, 17), fuente="pronostico"))
     db_session.commit()
     db_session.add(ClimaDiario(parcela_id=parcela_id, fecha=date(2026, 8, 17), fuente="archivo"))
-    with pytest.raises(IntegrityError):
-        db_session.commit()
-    db_session.rollback()
-
-
-def test_suelo_diario_se_guarda(db_session, parcela_id):
-    fila = SueloDiario(
-        parcela_id=parcela_id,
-        fecha=date(2026, 8, 17),
-        humedad_media=32.0, humedad_sd=2.83, humedad_max=34.0, humedad_min=30.0,
-        temperatura_media=19.0, temperatura_sd=1.41, temperatura_max=20.0, temperatura_min=18.0,
-        n_sensores=2, n_lecturas=4,
-    )
-    db_session.add(fila)
-    db_session.commit()
-    db_session.refresh(fila)
-    assert fila.id is not None
-    assert fila.n_sensores == 2
-
-
-def test_suelo_diario_no_admite_dos_filas_del_mismo_dia(db_session, parcela_id):
-    db_session.add(SueloDiario(parcela_id=parcela_id, fecha=date(2026, 8, 17)))
-    db_session.commit()
-    db_session.add(SueloDiario(parcela_id=parcela_id, fecha=date(2026, 8, 17)))
     with pytest.raises(IntegrityError):
         db_session.commit()
     db_session.rollback()

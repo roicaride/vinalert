@@ -1,6 +1,14 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Date, ForeignKey, Text, Boolean, UniqueConstraint
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+from sqlalchemy import Column, Integer, String, Float, DateTime, Date, ForeignKey, Text, Boolean, Index, UniqueConstraint
 from sqlalchemy.orm import relationship
 from .database import Base
+
+
+def _ahora_madrid() -> datetime:
+    # Hora local sin zona, igual que el resto de marcas de tiempo de la BD.
+    return datetime.now(ZoneInfo("Europe/Madrid")).replace(tzinfo=None)
 
 
 class Usuario(Base):
@@ -11,6 +19,9 @@ class Usuario(Base):
     telefono = Column(String)
     hashed_password = Column(String, nullable=False)
     rol = Column(String, default="agricultor")
+    # Cuando se dio de alta. Nula en las cuentas anteriores a la migracion
+    # 2026-09-18: esa fecha no se guardaba y no se puede reconstruir.
+    creado_en = Column(DateTime, default=_ahora_madrid)
 
     parcelas_asociadas = relationship("ParcelaUsuario", back_populates="usuario", cascade="all, delete-orphan")
 
@@ -22,25 +33,13 @@ class Parcela(Base):
     tipo_cultivo = Column(String)
     variedad = Column(String)
     superficie_total_m2 = Column(Float)
-    cobertura_cultivo_pct = Column(Float)
-    profundidad_raices_cm = Column(Float)
-    umbral_humedad_critico_pct = Column(Float, default=15.0)
     latitud = Column(Float)
     longitud = Column(Float)
-    distancia_filas_m = Column(Float, default=3.0)
-    distancia_plantas_m = Column(Float, default=1.0)
-    caudal_gotero_lph = Column(Float, default=2.2)
-    num_goteros_planta = Column(Integer, default=1)
-    eficiencia_riego_pct = Column(Float, default=95.0)
-    kc_actual = Column(Float, default=0.8)
-    porcentaje_cobertura_suelo = Column(Float)
-    capacidad_campo_suelo = Column(Float)
 
     logs_sensores = relationship("LogSensor", back_populates="parcela")
     sensores = relationship("Sensor", back_populates="parcela")
     logs_clima = relationship("LogClima", back_populates="parcela")
     clima_diario = relationship("ClimaDiario", back_populates="parcela")
-    suelo_diario = relationship("SueloDiario", back_populates="parcela")
     tratamientos = relationship("Tratamiento", back_populates="parcela")
     lecturas_foliares = relationship("LecturaFoliar", back_populates="parcela")
     dispositivos = relationship("DispositivoIoT", back_populates="parcela", cascade="all, delete-orphan")
@@ -91,6 +90,9 @@ class Sensor(Base):
 
 class LogSensor(Base):
     __tablename__ = "log_sensores"
+    # Todas las consultas de lecturas van por parcela y rango de fechas: sin
+    # este indice, agrupar un ano de lecturas recorreria la tabla entera.
+    __table_args__ = (Index("ix_log_sensores_parcela_fecha", "parcela_id", "fecha_hora"),)
     id = Column(Integer, primary_key=True, index=True)
     parcela_id = Column(Integer, ForeignKey("parcelas.id"))
     sensor_id = Column(Integer, ForeignKey("sensores.id"))
@@ -213,28 +215,6 @@ class ClimaDiario(Base):
     suelo_modelo_capa = Column(String)
 
     parcela = relationship("Parcela", back_populates="clima_diario")
-
-
-class SueloDiario(Base):
-    __tablename__ = "suelo_diario"
-    __table_args__ = (UniqueConstraint("parcela_id", "fecha", name="uq_suelo_diario_parcela_fecha"),)
-
-    id = Column(Integer, primary_key=True, index=True)
-    parcela_id = Column(Integer, ForeignKey("parcelas.id"), nullable=False)
-    fecha = Column(Date, nullable=False)
-
-    humedad_media = Column(Float)
-    humedad_sd = Column(Float)
-    humedad_max = Column(Float)
-    humedad_min = Column(Float)
-    temperatura_media = Column(Float)
-    temperatura_sd = Column(Float)
-    temperatura_max = Column(Float)
-    temperatura_min = Column(Float)
-    n_sensores = Column(Integer)
-    n_lecturas = Column(Integer)
-
-    parcela = relationship("Parcela", back_populates="suelo_diario")
 
 
 class LecturaFoliar(Base):

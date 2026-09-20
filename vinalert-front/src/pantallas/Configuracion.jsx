@@ -18,14 +18,9 @@ import Campo, { claseControl } from '../ui/Campo';
 import { Aviso, Marbete, Testigo } from '../ui/Estados';
 import { Encabezado } from '../ui/Panel';
 
-// Los 17 campos de ParcelaUpdate (app/schemas.py), agrupados como en el spec.
+// Los campos editables de ParcelaUpdate (app/schemas.py).
 const CAMPOS_TEXTO = ['nombre', 'tipo_cultivo', 'variedad'];
-const CAMPOS_NUMERO = [
-  'superficie_total_m2', 'cobertura_cultivo_pct', 'porcentaje_cobertura_suelo',
-  'profundidad_raices_cm', 'umbral_humedad_critico_pct', 'capacidad_campo_suelo', 'kc_actual',
-  'distancia_filas_m', 'distancia_plantas_m', 'caudal_gotero_lph', 'num_goteros_planta',
-  'eficiencia_riego_pct', 'latitud', 'longitud',
-];
+const CAMPOS_NUMERO = ['superficie_total_m2', 'latitud', 'longitud'];
 
 // Intervalo entre ciclos de medicion del maestro LoRa, en segundos. El rango
 // lo valida el backend (INTERVALO_CICLO_MIN/MAX_SEG en app/schemas.py): los
@@ -246,7 +241,7 @@ export default function Configuracion() {
     <>
       <Encabezado
         titulo="Configuración"
-        descripcion="Los datos de la finca de los que salen todos los cálculos: superficie, suelo, riego y coordenadas."
+        descripcion="Los datos de la finca y sus coordenadas, que son las que se usan para pedir el clima."
       >
         <Marbete tono="neutro">Parcela {parcela.id}</Marbete>
       </Encabezado>
@@ -257,23 +252,9 @@ export default function Configuracion() {
           <CampoTexto etiqueta="Tipo de cultivo" valor={campos.tipo_cultivo} onChange={cambiar('tipo_cultivo')} disabled={!puedeGestionar} />
           <CampoTexto etiqueta="Variedad" valor={campos.variedad} onChange={cambiar('variedad')} disabled={!puedeGestionar} />
           <CampoNumero etiqueta="Superficie total (m²)" valor={campos.superficie_total_m2} onChange={cambiar('superficie_total_m2')} disabled={!puedeGestionar} />
-          <CampoNumero etiqueta="Cobertura del cultivo (%)" valor={campos.cobertura_cultivo_pct} onChange={cambiar('cobertura_cultivo_pct')} disabled={!puedeGestionar} />
-          <CampoNumero etiqueta="Cobertura del suelo (%)" valor={campos.porcentaje_cobertura_suelo} onChange={cambiar('porcentaje_cobertura_suelo')} disabled={!puedeGestionar} />
         </Grupo>
 
-        <Grupo titulo="Suelo y cultivo" nota="De aquí sale el balance hídrico.">
-          <CampoNumero etiqueta="Profundidad de raíces (cm)" valor={campos.profundidad_raices_cm} onChange={cambiar('profundidad_raices_cm')} disabled={!puedeGestionar} />
-          <CampoNumero etiqueta="Umbral humedad crítico (%)" valor={campos.umbral_humedad_critico_pct} onChange={cambiar('umbral_humedad_critico_pct')} disabled={!puedeGestionar} />
-          <CampoNumero etiqueta="Capacidad de campo (%)" valor={campos.capacidad_campo_suelo} onChange={cambiar('capacidad_campo_suelo')} disabled={!puedeGestionar} />
-          <CampoNumero etiqueta="Kc actual" valor={campos.kc_actual} onChange={cambiar('kc_actual')} disabled={!puedeGestionar} />
-        </Grupo>
-
-        <Grupo titulo="Riego y coordenadas" nota="Sin coordenadas no se puede pedir el clima.">
-          <CampoNumero etiqueta="Distancia entre filas (m)" valor={campos.distancia_filas_m} onChange={cambiar('distancia_filas_m')} disabled={!puedeGestionar} />
-          <CampoNumero etiqueta="Distancia entre plantas (m)" valor={campos.distancia_plantas_m} onChange={cambiar('distancia_plantas_m')} disabled={!puedeGestionar} />
-          <CampoNumero etiqueta="Caudal de gotero (l/h)" valor={campos.caudal_gotero_lph} onChange={cambiar('caudal_gotero_lph')} disabled={!puedeGestionar} />
-          <CampoNumero etiqueta="Nº de goteros por planta" valor={campos.num_goteros_planta} onChange={cambiar('num_goteros_planta')} disabled={!puedeGestionar} />
-          <CampoNumero etiqueta="Eficiencia de riego (%)" valor={campos.eficiencia_riego_pct} onChange={cambiar('eficiencia_riego_pct')} disabled={!puedeGestionar} />
+        <Grupo titulo="Coordenadas" nota="Sin coordenadas no se puede pedir el clima.">
           <CampoNumero etiqueta="Latitud" valor={campos.latitud} onChange={cambiar('latitud')} disabled={!puedeGestionar} min={-90} max={90} />
           <CampoNumero etiqueta="Longitud" valor={campos.longitud} onChange={cambiar('longitud')} disabled={!puedeGestionar} min={-180} max={180} />
         </Grupo>

@@ -1,35 +1,19 @@
 import logging
-from datetime import date, timedelta
-from typing import Any
+from datetime import datetime
+from typing import Any, List
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..deps import get_current_user, parcela_con_gestion
+from ..deps import get_current_user, parcela_con_gestion, parcela_con_lectura
 from ..models import LogClima, Usuario
-from ..schemas import BackfillRequest, BackfillResp, ComprobacionClimaResp, LogClimaResp
-from ..services.clima_diario_service import guardar_dias
-from ..services.weather import fetch_y_guardar_clima, get_provider
+from ..schemas import ClimaHorarioResp, ComprobacionClimaResp, LogClimaResp
+from ..services.weather import TZ_LOCAL, fetch_y_guardar_clima, get_provider
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["clima"])
-
-# El archivo va con varios días de desfase respecto a hoy.
-DIAS_DESFASE_ARCHIVO = 7
-
-
-def _restar_anios(fecha: date, anios: int) -> date:
-    """
-    Resta años a una fecha. El 29 de febrero degrada al 28 cuando el año
-    destino no es bisiesto (convención habitual, evita un ValueError).
-    """
-    try:
-        return fecha.replace(year=fecha.year - anios)
-    except ValueError:
-        return fecha.replace(year=fecha.year - anios, day=28)
-
 
 @router.post(
     "/parcelas/{parcela_id}/actualizar-clima",
@@ -55,20 +39,6 @@ def actualizar_clima(
         raise HTTPException(status_code=503, detail=f"Error al contactar el proveedor meteorológico: {aviso}")
 
     return db.query(LogClima).filter(LogClima.parcela_id == parcela_id).order_by(LogClima.fecha_hora.desc()).first()
-
-
-@router.get(
-    "/clima/ping",
-    summary="Verifica la conectividad con el proveedor meteorológico configurado",
-)
-def ping_clima() -> dict:
-    provider = get_provider()
-    ok = provider.ping()
-    return {
-        "proveedor": type(provider).__name__,
-        "conectado": ok,
-        "estado": "OK" if ok else "ERROR — sin respuesta del proveedor",
-    }
 
 
 @router.get(
@@ -127,53 +97,32 @@ def comprobar_clima(
     )
 
 
-@router.post(
-    "/parcelas/{parcela_id}/clima/backfill",
-    response_model=BackfillResp,
-    summary="Rellena clima_diario hacia atrás desde el archivo histórico",
+@router.get(
+    "/parcelas/{parcela_id}/clima/horario",
+    response_model=List[ClimaHorarioResp],
+    summary="Lluvia, ET0 y temperatura hora a hora: 48 h atras y 48 h de prevision",
 )
-def backfill_clima(
+def clima_horario(
     parcela_id: int,
-    body: BackfillRequest,
     current_user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Any:
-    parcela = parcela_con_gestion(parcela_id, current_user, db)
-
+    """
+    Se pide a Open-Meteo cada vez, sin guardarlo: es una sola consulta y el
+    dato de una hora pasada no cambia. `prevision` marca las horas que aun no
+    han llegado, para que la web las separe de lo ya medido.
+    """
+    parcela = parcela_con_lectura(parcela_id, current_user, db)
     if parcela.latitud is None or parcela.longitud is None:
         raise HTTPException(
             status_code=422,
-            detail="La parcela no tiene coordenadas (latitud/longitud). Edítala antes de rellenar el histórico.",
+            detail="La parcela no tiene coordenadas: sin ellas no se puede pedir el clima.",
         )
-
-    tope = date.today() - timedelta(days=DIAS_DESFASE_ARCHIVO)
-
-    if body.anios:
-        hasta = tope
-        desde = _restar_anios(hasta, body.anios)
-    else:
-        if body.desde is None or body.hasta is None:
-            raise HTTPException(status_code=422, detail="Indica 'anios' o bien 'desde' y 'hasta'.")
-        desde, hasta = body.desde, body.hasta
-
-    recortado = hasta > tope
-    if recortado:
-        hasta = tope
-
-    if desde > hasta:
-        raise HTTPException(status_code=422, detail="El rango pedido queda vacío tras recortar al desfase del archivo.")
-
     try:
-        filas = get_provider().fetch_archivo(parcela.latitud, parcela.longitud, desde, hasta)
+        filas = get_provider().fetch_horario(parcela.latitud, parcela.longitud)
     except Exception as exc:
-        raise HTTPException(status_code=503, detail=f"Error al contactar el archivo meteorológico: {exc}")
+        logger.warning("Open-Meteo no devolvio el horario de la parcela %s: %s", parcela_id, exc)
+        raise HTTPException(status_code=503, detail="El proveedor meteorologico no responde.")
 
-    resumen = guardar_dias(parcela_id, filas, db)
-
-    return BackfillResp(
-        desde=desde,
-        hasta=hasta,
-        recortado=recortado,
-        dias_solicitados=(hasta - desde).days + 1,
-        **resumen,
-    )
+    ahora = datetime.now(TZ_LOCAL).replace(tzinfo=None)
+    return [ClimaHorarioResp(**fila, prevision=fila["fecha_hora"] > ahora) for fila in filas]

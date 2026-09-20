@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from app.models import Parcela, Usuario
+from tests.ayudas import alta_sensor
 
 
 def _crear_admin(client, db_session):
@@ -32,9 +33,7 @@ def test_flujo_dispositivos_iot_100_anios_y_revocacion(client, db_session, parce
     admin_headers = _crear_admin(client, db_session)
 
     # 1. Crear un sensor en la parcela
-    resp_s = client.post(f"/parcelas/{parcela_id}/sensores/", json={"etiqueta": "Sensor Raiz"}, headers=admin_headers)
-    assert resp_s.status_code == 201
-    sensor_id = resp_s.json()["id"]
+    sensor_id = alta_sensor(client, admin_headers, parcela_id, etiqueta="Sensor Raiz")["id"]
 
     # 2. Crear un token de 100 años para el ESP32 Gateway (solo admin@vinalert.dev)
     resp_disp = client.post(

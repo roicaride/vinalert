@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 # ─── Inputs ──────────────────────────────────────────────────────────────────
@@ -15,34 +15,6 @@ class LogSensorCreate(BaseModel):
     bateria: Optional[float] = Field(None, ge=0, le=100)
 
 
-class LogClimaCreate(BaseModel):
-    parcela_id: int
-    fecha_hora: datetime
-    temp_c: Optional[float] = None
-    humedad_relativa_pct: Optional[float] = None
-    presion_hpa: Optional[float] = None
-    viento_vel_ms: Optional[float] = None
-    uv_index: Optional[float] = None
-    lluvia_mm: Optional[float] = None
-    et0: Optional[float] = None
-    lluvia_prev_24h_mm: Optional[float] = None
-    prob_lluvia_24h_pct: Optional[float] = None
-    lluvia_prev_48h_mm: Optional[float] = None
-    prob_lluvia_48h_pct: Optional[float] = None
-    vpd_kpa: Optional[float] = None
-    punto_rocio_c: Optional[float] = None
-    radiacion_wm2: Optional[float] = None
-    nubosidad_pct: Optional[float] = None
-    viento_racha_ms: Optional[float] = None
-    viento_dir_deg: Optional[float] = None
-    duracion_sol_s: Optional[float] = None
-    suelo_temp_0cm: Optional[float] = None
-    suelo_temp_6cm: Optional[float] = None
-    suelo_temp_18cm: Optional[float] = None
-    suelo_hum_0_1cm: Optional[float] = None
-    suelo_hum_1_3cm: Optional[float] = None
-    suelo_hum_3_9cm: Optional[float] = None
-    suelo_hum_9_27cm: Optional[float] = None
 
 
 class ParcelaCreate(BaseModel):
@@ -50,19 +22,8 @@ class ParcelaCreate(BaseModel):
     tipo_cultivo: Optional[str] = None
     variedad: Optional[str] = None
     superficie_total_m2: Optional[float] = None
-    cobertura_cultivo_pct: Optional[float] = None
-    profundidad_raices_cm: Optional[float] = None
-    umbral_humedad_critico_pct: Optional[float] = None
     latitud: Optional[float] = Field(default=None, ge=-90, le=90)
     longitud: Optional[float] = Field(default=None, ge=-180, le=180)
-    distancia_filas_m: Optional[float] = None
-    distancia_plantas_m: Optional[float] = None
-    caudal_gotero_lph: Optional[float] = None
-    num_goteros_planta: Optional[int] = None
-    eficiencia_riego_pct: Optional[float] = None
-    kc_actual: Optional[float] = None
-    porcentaje_cobertura_suelo: Optional[float] = None
-    capacidad_campo_suelo: Optional[float] = None
 
 
 class ParcelaUpdate(BaseModel):
@@ -71,29 +32,32 @@ class ParcelaUpdate(BaseModel):
     tipo_cultivo: Optional[str] = None
     variedad: Optional[str] = None
     superficie_total_m2: Optional[float] = None
-    cobertura_cultivo_pct: Optional[float] = None
-    profundidad_raices_cm: Optional[float] = None
-    umbral_humedad_critico_pct: Optional[float] = None
     latitud: Optional[float] = Field(default=None, ge=-90, le=90)
     longitud: Optional[float] = Field(default=None, ge=-180, le=180)
-    distancia_filas_m: Optional[float] = None
-    distancia_plantas_m: Optional[float] = None
-    caudal_gotero_lph: Optional[float] = None
-    num_goteros_planta: Optional[int] = None
-    eficiencia_riego_pct: Optional[float] = None
-    kc_actual: Optional[float] = None
-    porcentaje_cobertura_suelo: Optional[float] = None
-    capacidad_campo_suelo: Optional[float] = None
 
 
 class UsuarioCreate(BaseModel):
-    nombre: str
-    email: str
-    password: str
+    """
+    Lo que manda el formulario de registro. Sin `rol` a proposito: el registro
+    publico no puede elegir sus permisos (ver test_autorizacion).
+    """
+    nombre: str = Field(min_length=1, max_length=120)
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("nombre", mode="before")
+    @classmethod
+    def _nombre_sin_espacios(cls, v):
+        return v.strip() if isinstance(v, str) else v
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def _email_normalizado(cls, v):
+        # Un email es el mismo con o sin mayusculas: normalizarlo aqui evita que
+        # «Ana@x.com» y «ana@x.com» acaben siendo dos cuentas distintas.
+        return v.strip().lower() if isinstance(v, str) else v
 
 
-class SensorCreate(BaseModel):
-    etiqueta: str
 
 
 class SensorUpdate(BaseModel):
@@ -124,6 +88,20 @@ class UsuarioMeResp(BaseModel):
     nombre: str
     email: str
     rol: str
+    # Lo decide el backend (deps.es_superadmin) para que la web no tenga que
+    # repetir por su cuenta cual es el email del administrador.
+    es_superadmin: bool = False
+
+
+class UsuarioAdminResp(BaseModel):
+    """Una fila del listado de cuentas del admin. Nunca incluye la contrasena."""
+    id: int
+    nombre: str
+    email: str
+    telefono: Optional[str] = None
+    rol: str
+    creado_en: Optional[datetime] = None
+    n_parcelas: int
 
 
 class Token(BaseModel):
@@ -139,19 +117,8 @@ class ParcelaResp(BaseModel):
     tipo_cultivo: Optional[str] = None
     variedad: Optional[str] = None
     superficie_total_m2: Optional[float] = None
-    cobertura_cultivo_pct: Optional[float] = None
-    profundidad_raices_cm: Optional[float] = None
-    umbral_humedad_critico_pct: Optional[float] = None
     latitud: Optional[float] = None
     longitud: Optional[float] = None
-    kc_actual: Optional[float] = None
-    distancia_filas_m: Optional[float] = None
-    distancia_plantas_m: Optional[float] = None
-    caudal_gotero_lph: Optional[float] = None
-    num_goteros_planta: Optional[int] = None
-    eficiencia_riego_pct: Optional[float] = None
-    porcentaje_cobertura_suelo: Optional[float] = None
-    capacidad_campo_suelo: Optional[float] = None
 
 
 class SensorResp(BaseModel):
@@ -190,6 +157,15 @@ class LogSensorResp(BaseModel):
     vpd_kpa: Optional[float] = None
     punto_rocio_c: Optional[float] = None
     nubosidad_pct: Optional[float] = None
+    uv_index: Optional[float] = None
+    duracion_sol_s: Optional[float] = None
+    suelo_temp_0cm: Optional[float] = None
+    suelo_temp_6cm: Optional[float] = None
+    suelo_temp_18cm: Optional[float] = None
+    suelo_hum_0_1cm: Optional[float] = None
+    suelo_hum_1_3cm: Optional[float] = None
+    suelo_hum_3_9cm: Optional[float] = None
+    suelo_hum_9_27cm: Optional[float] = None
 
 
 class LogClimaResp(BaseModel):
@@ -201,8 +177,15 @@ class LogClimaResp(BaseModel):
     humedad_relativa_pct: Optional[float] = None
     lluvia_mm: Optional[float] = None
     et0: Optional[float] = None
+    presion_hpa: Optional[float] = None
+    viento_vel_ms: Optional[float] = None
+    uv_index: Optional[float] = None
+    # Prevision de Open-Meteo en el momento de la consulta: 24h = manana,
+    # 48h = pasado manana.
     lluvia_prev_24h_mm: Optional[float] = None
     prob_lluvia_24h_pct: Optional[float] = None
+    lluvia_prev_48h_mm: Optional[float] = None
+    prob_lluvia_48h_pct: Optional[float] = None
     vpd_kpa: Optional[float] = None
     punto_rocio_c: Optional[float] = None
     radiacion_wm2: Optional[float] = None
@@ -300,6 +283,16 @@ class LecturaFoliarResp(BaseModel):
     archivo_origen: Optional[str] = None
 
 
+class ClimaHorarioResp(BaseModel):
+    """Una hora de GET /parcelas/{id}/clima/horario."""
+    fecha_hora: datetime
+    lluvia_mm: Optional[float] = None
+    prob_lluvia_pct: Optional[float] = None
+    et0_mm: Optional[float] = None
+    temp_c: Optional[float] = None
+    prevision: bool
+
+
 class ClimaDiarioResp(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
@@ -327,20 +320,8 @@ class ClimaDiarioResp(BaseModel):
     suelo_modelo_capa: Optional[str] = None
 
 
-class BackfillRequest(BaseModel):
-    desde: Optional[date] = None
-    hasta: Optional[date] = None
-    anios: Optional[int] = Field(None, ge=1, le=20)
 
 
-class BackfillResp(BaseModel):
-    desde: date
-    hasta: date
-    recortado: bool
-    dias_solicitados: int
-    insertados: int
-    actualizados: int
-    omitidos: int
 
 
 class ComprobacionClimaResp(BaseModel):
@@ -367,21 +348,19 @@ class MiembroResp(BaseModel):
     rol: str
 
 
-class SueloDiarioResp(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    parcela_id: int
+class SueloDiarioSensorResp(BaseModel):
+    """Un dia de un sensor en GET /parcelas/{id}/suelo/diario."""
     fecha: date
+    sensor_id: int
+    sensor_numero: int
+    profundidad_cm: Optional[float] = None
     humedad_media: Optional[float] = None
-    humedad_sd: Optional[float] = None
     humedad_max: Optional[float] = None
     humedad_min: Optional[float] = None
     temperatura_media: Optional[float] = None
-    temperatura_sd: Optional[float] = None
     temperatura_max: Optional[float] = None
     temperatura_min: Optional[float] = None
-    n_sensores: Optional[int] = None
-    n_lecturas: Optional[int] = None
+    n_lecturas: int
 
 
 # Limites del intervalo de ciclo del maestro LoRa. El minimo permite seguir

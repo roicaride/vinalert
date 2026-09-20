@@ -16,6 +16,28 @@ def _extremo(valores: list, funcion) -> Optional[float]:
     return funcion(valores) if valores else None
 
 
+def media_justa(entradas: Iterable[tuple]) -> Optional[float]:
+    """
+    Media de las medias de cada sensor. `entradas` son tuplas
+    (sensor_id, valor) o (sensor_id, valor, peso); el peso, por defecto 1,
+    solo pondera DENTRO de cada sensor (p. ej. dias con su numero de
+    lecturas). Asi un sensor que manda mas lecturas no pesa mas que otro, y
+    uno que falta en un envio no mueve la media.
+    """
+    por_sensor: dict = {}
+    for entrada in entradas:
+        sensor_id, valor = entrada[0], entrada[1]
+        peso = entrada[2] if len(entrada) > 2 else 1
+        if valor is None or not peso:
+            continue
+        suma, total = por_sensor.get(sensor_id, (0.0, 0))
+        por_sensor[sensor_id] = (suma + valor * peso, total + peso)
+    if not por_sensor:
+        return None
+    medias = [suma / total for suma, total in por_sensor.values()]
+    return sum(medias) / len(medias)
+
+
 def calcular_resumen(lecturas: Iterable[LogSensor]) -> dict:
     """
     Agrega humedad y temperatura de un conjunto de lecturas de log_sensores.

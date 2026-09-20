@@ -42,9 +42,9 @@ What the platform does:
 
 | Capability | Description |
 | --- | --- |
-| **Soil telemetry** | Moisture, temperature and conductivity per sensor, with per-plot aggregation and configurable critical thresholds. |
-| **Weather integration** | Hourly current conditions and daily aggregates from Open-Meteo, including historical backfill for retroactive analysis. |
-| **Water balance** | Evapotranspiration-based irrigation guidance derived from plot geometry, crop coefficient, emitter flow rate and irrigation efficiency. |
+| **Soil telemetry** | Moisture and temperature per sensor, with per-plot aggregation. |
+| **Weather integration** | Current conditions every few hours and daily aggregates from Open-Meteo, plus the weather at the exact moment of each reading and each treatment. |
+| **Water balance** | Rainfall against reference evapotranspiration (ET₀) over any period. |
 | **Treatment log** | Phytosanitary treatment records, each reconstructed with the atmospheric conditions at the time of application. |
 | **Foliar measurements** | Excel ingestion from Dualex handheld sensors (chlorophyll, flavonols, anthocyanins, NBI). |
 | **Analysis** | Time series charts over configurable ranges, overlaying soil, weather, treatments and foliar readings. |
@@ -118,8 +118,7 @@ duty cycle can be tuned from the web UI without reflashing any node.
 │   └── marca/                Brand assets
 ├── migracion_*.sql           Ordered schema migrations
 ├── semilla_inicial.py        Seed script for a fresh database
-├── backfill_2026.py          Historical weather backfill
-└── worker.py                 Standalone scheduler entry point
+└── worker.py                 Runs the daily consolidation by hand
 ```
 
 ## Getting started
@@ -154,12 +153,11 @@ migrations in [Database migrations](#database-migrations) and optionally seed it
 python semilla_inicial.py
 ```
 
-The background scheduler starts with the application. To run it as a separate process
-instead — recommended when the API runs behind multiple workers, so jobs are not
-executed once per worker — use:
+The background scheduler starts with the application. To re-run the daily
+consolidation by hand (for example, the last 30 days) use:
 
 ```bash
-python worker.py
+python worker.py 30
 ```
 
 ### Frontend
@@ -246,22 +244,26 @@ psql "$DATABASE_URL" -f migracion_2026_08_18_cimientos.sql
 psql "$DATABASE_URL" -f migracion_2026_08_19_multiusuario.sql
 psql "$DATABASE_URL" -f migracion_2026_08_19_sensores.sql
 psql "$DATABASE_URL" -f migracion_2026_08_22_intervalo_dispositivo.sql
+psql "$DATABASE_URL" -f migracion_2026_09_18_usuarios_alta.sql
+psql "$DATABASE_URL" -f migracion_2026_09_18_quitar_riego.sql
+psql "$DATABASE_URL" -f migracion_2026_09_19_suelo_por_sensor.sql
 ```
 
 Back up the database before applying migrations to a production instance.
 
 ## API reference
 
-All endpoints except `/register` and `/token` require a bearer token:
-`Authorization: Bearer <token>`.
+All endpoints except `/auth/register` and `/auth/token` require a bearer token:
+`Authorization: Bearer <token>`. `/{id}` below is the plot id.
 
-### Authentication
+### Authentication and administration
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `POST` | `/register` | Register a user. |
-| `POST` | `/token` | Exchange credentials for a JWT. |
-| `GET` | `/me` | Current user and their plot memberships. |
+| `POST` | `/auth/register` | Register a user. |
+| `POST` | `/auth/token` | Exchange credentials for a JWT. |
+| `GET` | `/auth/me` | Current user. |
+| `GET` | `/admin/usuarios` | Every account with its sign-up date and plot count. Superadmin only. |
 
 ### Plots
 
@@ -269,28 +271,26 @@ All endpoints except `/register` and `/token` require a bearer token:
 | --- | --- | --- |
 | `GET` `POST` | `/parcelas/` | List or create plots. |
 | `GET` `PATCH` `DELETE` | `/parcelas/{id}` | Read, update or delete a plot (cascading). |
-| `GET` | `/parcelas/{id}/dashboard` | Consolidated soil, weather and water balance summary. |
-| `GET` | `/parcelas/{id}/historico` | Raw sensor readings over a time range. |
+| `GET` | `/parcelas/{id}/dashboard` | Last 24 h soil summary and current weather. |
+| `GET` | `/parcelas/{id}/historico` | Latest sensor readings, each with the weather at that moment. |
 | `GET` | `/parcelas/{id}/clima/diario` | Daily weather aggregates. |
-| `GET` | `/parcelas/{id}/suelo/diario` | Daily soil aggregates. |
+| `GET` | `/parcelas/{id}/suelo/diario` | Daily soil averages per sensor, computed from the readings. |
+| `POST` | `/parcelas/{id}/actualizar-clima` | Fetch current weather now. |
+| `GET` | `/parcelas/{id}/clima/comprobar` | Check the weather provider has data for the plot's coordinates. |
 
 ### Sensors
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` `POST` | `/sensores/` | List or create sensors. |
-| `POST` | `/sensores/provisionar` | Bulk-provision a node's sensors. |
-| `PATCH` `DELETE` | `/sensores/{id}` | Update or delete a sensor. |
-| `GET` | `/sensores/resumen` | Per-sensor status summary. |
-| `GET` | `/sensores/{id}/historico` | Historical readings for one sensor. |
-| `GET` | `/sensores/exportar` | Export readings as a spreadsheet. |
+| `GET` | `/parcelas/{id}/sensores/` | List sensors. |
+| `POST` | `/parcelas/{id}/sensores/provisionar` | Create sensors up to a total count. |
+| `PATCH` `DELETE` | `/parcelas/{id}/sensores/{sid}` | Update or delete a sensor. |
 
 ### Ingestion
 
 | Method | Path | Description |
 | --- | --- | --- |
 | `POST` | `/logs/sensor/` | Submit a soil reading. Used by the ESP32 master. |
-| `POST` | `/logs/clima/` | Submit a weather reading. |
 
 ### IoT devices
 
@@ -298,18 +298,21 @@ All endpoints except `/register` and `/token` require a bearer token:
 | --- | --- | --- |
 | `GET` `POST` | `/parcelas/{id}/dispositivos` | List devices or issue a device token. |
 | `GET` | `/dispositivos/configuracion` | Sampling interval. Polled by the master each cycle. |
-| `PATCH` | `/parcelas/{id}/dispositivos/{did}` | Update a device. |
-| `PATCH` | `/parcelas/{id}/dispositivos/{did}/revocar` | Revoke a device token. |
+| `PATCH` | `/parcelas/{id}/dispositivos/{did}` | Change a device's sampling interval. |
+| `PATCH` | `/parcelas/{id}/dispositivos/{did}/revocar` | Revoke or reactivate a device token. |
 | `DELETE` | `/parcelas/{id}/dispositivos/{did}` | Delete a device. |
 
-### Agronomy
+### Field records and access
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `POST` | `/foliar/upload` | Ingest a Dualex foliar measurement spreadsheet. |
-| `GET` | `/foliar/` | List foliar readings. |
-| `POST` `GET` `DELETE` | `/tratamientos/` | Manage phytosanitary treatment records. |
-| `GET` `POST` `PATCH` `DELETE` | `/parcelas/{id}/miembros` | Manage plot membership. |
+| `GET` | `/parcelas/{id}/foliar/` | List foliar readings. |
+| `POST` | `/parcelas/{id}/foliar/upload` | Ingest a Dualex foliar measurement spreadsheet. |
+| `GET` | `/parcelas/{id}/tratamientos` | List treatment records. |
+| `POST` | `/tratamientos/` | Record a treatment (the weather at that moment is attached). |
+| `DELETE` | `/tratamientos/{tid}` | Delete a treatment record. |
+| `GET` `POST` | `/parcelas/{id}/usuarios` | List members or add one by email. |
+| `PATCH` `DELETE` | `/parcelas/{id}/usuarios/{uid}` | Change a member's role or remove them. |
 
 ## Access model
 

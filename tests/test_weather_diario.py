@@ -36,9 +36,9 @@ class _Resp:
         return {"daily": DAILY}
 
 
-def test_fetch_archivo_mapea_los_dias():
+def test_fetch_diario_mapea_los_dias():
     with patch("app.services.weather.requests.get", return_value=_Resp()):
-        filas = OpenMeteoProvider().fetch_archivo(41.65, -4.72, date(2026, 8, 15), date(2026, 8, 16))
+        filas = OpenMeteoProvider().fetch_diario(41.65, -4.72, past_days=7)
 
     assert len(filas) == 2
     d0 = filas[0]
@@ -53,7 +53,7 @@ def test_fetch_archivo_mapea_los_dias():
     assert d0["humectacion_foliar_pct"] == 12.0
     assert d0["suelo_modelo_humedad"] == 0.039
     assert d0["suelo_modelo_temp"] == 19.1
-    assert d0["fuente"] == "archivo"
+    assert d0["fuente"] == "pronostico"
     assert d0["suelo_modelo_capa"] == "0_to_7cm"
 
 
@@ -61,11 +61,11 @@ def test_viento_vel_media_usa_la_media_no_el_maximo():
     """
     Hallazgo 1 (review final): viento_vel_media debe salir de
     wind_speed_10m_mean, no de wind_speed_10m_max. La API confirma que
-    wind_speed_10m_mean responde en ambos endpoints (pronóstico y archivo);
-    ver el informe de revisión final para la evidencia real.
+    wind_speed_10m_mean responde en el endpoint de pronóstico; ver el informe
+    de revisión final para la evidencia real.
     """
     with patch("app.services.weather.requests.get", return_value=_Resp()):
-        filas = OpenMeteoProvider().fetch_archivo(41.65, -4.72, date(2026, 8, 15), date(2026, 8, 16))
+        filas = OpenMeteoProvider().fetch_diario(41.65, -4.72, past_days=7)
 
     assert filas[0]["viento_vel_media"] == 3.4, "debe venir de wind_speed_10m_mean, no del max"
     assert filas[1]["viento_vel_media"] == 2.9
@@ -83,7 +83,7 @@ def test_vpd_medio_no_es_columna_del_modelo():
     en vez de dejarla puesta a None para siempre.
     """
     with patch("app.services.weather.requests.get", return_value=_Resp()):
-        filas = OpenMeteoProvider().fetch_archivo(41.65, -4.72, date(2026, 8, 15), date(2026, 8, 16))
+        filas = OpenMeteoProvider().fetch_diario(41.65, -4.72, past_days=7)
 
     assert "vpd_medio" not in filas[0]
     assert filas[0]["vpd_max"] == 1.94
@@ -91,7 +91,7 @@ def test_vpd_medio_no_es_columna_del_modelo():
 
 def test_horas_sol_se_convierte_de_segundos_a_horas():
     with patch("app.services.weather.requests.get", return_value=_Resp()):
-        filas = OpenMeteoProvider().fetch_archivo(41.65, -4.72, date(2026, 8, 15), date(2026, 8, 16))
+        filas = OpenMeteoProvider().fetch_diario(41.65, -4.72, past_days=7)
 
     assert round(filas[0]["horas_sol"], 2) == round(51931.62 / 3600, 2)
     assert filas[1]["horas_sol"] == 12.0

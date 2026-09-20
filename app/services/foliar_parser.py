@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import datetime
 from typing import BinaryIO, Dict, List, Union
 
 import openpyxl

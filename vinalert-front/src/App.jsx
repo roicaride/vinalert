@@ -13,8 +13,9 @@ import Estado from './pantallas/Estado';
 import Tratamientos from './pantallas/Tratamientos';
 import Foliar from './pantallas/Foliar';
 import Analisis from './pantallas/Analisis';
+import Administracion from './pantallas/Administracion';
 import Login from './pantallas/Login';
-import Seccion from './pantallas/Seccion';
+import Portada from './pantallas/Portada';
 import SeleccionParcela from './pantallas/SeleccionParcela';
 import MensajeError from './errores/MensajeError';
 import { Cargando } from './ui/Estados';
@@ -84,6 +85,16 @@ function Entrada() {
 }
 
 
+// La raiz es de dos publicos. Quien ya tiene sesion va a lo suyo sin pasar por
+// la publicidad; quien no, ve la portada. Mientras se resuelve el token no se
+// decide nada, igual que en RutaProtegida: si no, la portada parpadearia en
+// cada recarga de alguien que si tiene sesion.
+function Inicio() {
+  const { usuario, cargando } = useSesion();
+  if (cargando) return <Cargando texto="Comprobando la sesión" />;
+  return usuario ? <Entrada /> : <Portada />;
+}
+
 // Que ruta usa que componente real.
 const PANTALLAS = {
   configuracion: Configuracion,
@@ -102,8 +113,9 @@ export default function App() {
         <ProveedorSesion>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/" element={<RutaProtegida><Entrada /></RutaProtegida>} />
+            <Route path="/" element={<Inicio />} />
             <Route path="/parcelas" element={<RutaProtegida><Entrada /></RutaProtegida>} />
+            <Route path="/admin" element={<RutaProtegida><Administracion /></RutaProtegida>} />
             <Route
               path="/p/:parcelaId"
               element={<RutaProtegida><ParcelaLayout /></RutaProtegida>}
@@ -115,7 +127,7 @@ export default function App() {
                   <Route
                     key={s.ruta}
                     path={s.ruta}
-                    element={Pantalla ? <Pantalla /> : <Seccion titulo={s.titulo} descripcion={s.descripcion} />}
+                    element={<Pantalla />}
                   />
                 );
               })}

@@ -1,6 +1,7 @@
 import pytest
 
 from app.models import DispositivoIoT, ParcelaUsuario, Usuario
+from tests.ayudas import alta_sensor
 
 
 # La matriz es EXPLICITA a proposito, no derivada de las rutas de FastAPI:
@@ -25,22 +26,17 @@ ENDPOINTS = [
     ("GET", "/parcelas/{pid}/clima/diario", False),
     ("GET", "/parcelas/{pid}/suelo/diario", False),
     ("GET", "/parcelas/{pid}/sensores/", False),
-    ("GET", "/parcelas/{pid}/sensores/resumen", False),
-    ("GET", "/parcelas/{pid}/sensores/exportar", False),
-    ("GET", "/parcelas/{pid}/sensores/{sid}/historico", False),
     ("GET", "/parcelas/{pid}/foliar/", False),
     ("GET", "/parcelas/{pid}/tratamientos", False),
     ("GET", "/parcelas/{pid}/clima/comprobar", True),
-    ("POST", "/parcelas/{pid}/sensores/", True),
+    ("GET", "/parcelas/{pid}/clima/horario", False),
     ("POST", "/parcelas/{pid}/sensores/provisionar", True),
     ("PATCH", "/parcelas/{pid}/sensores/{sid}", True),
     ("DELETE", "/parcelas/{pid}/sensores/{sid}", True),
     ("POST", "/parcelas/{pid}/actualizar-clima", True),
-    ("POST", "/parcelas/{pid}/clima/backfill", True),
     ("POST", "/parcelas/{pid}/foliar/upload", True),
 
     ("POST", "/logs/sensor/", True),
-    ("POST", "/logs/clima/", True),
     ("POST", "/tratamientos/", True),
     ("DELETE", "/tratamientos/{tid}", True),
     ("GET", "/parcelas/{pid}/usuarios", False),
@@ -75,7 +71,7 @@ def sin_red(monkeypatch):
 
     proveedor = MagicMock()
     proveedor.fetch.return_value = {"temp_c": 20.0}
-    proveedor.fetch_archivo.return_value = []
+    proveedor.fetch_horario.return_value = []
     monkeypatch.setattr(cf, "get_provider", lambda: proveedor)
 
     def _guardar_falso(parcela, db):
@@ -116,26 +112,16 @@ def _cuerpo(metodo, plantilla, escenario):
     pid = escenario["pid"]
     sid = escenario.get("sid")
 
-    if plantilla == "/parcelas/{pid}/sensores/" and metodo == "POST":
-        return {"etiqueta": "Nodo nuevo"}
     if plantilla.endswith("/sensores/provisionar"):
         return {"cantidad": 2}
     if plantilla == "/parcelas/{pid}/sensores/{sid}" and metodo == "PATCH":
         return {"etiqueta": "Actualizado"}
-    if plantilla == "/parcelas/{pid}/clima/backfill":
-        return {"anios": 1}
     if plantilla == "/logs/sensor/":
         return {
             "parcela_id": pid,
             "sensor_id": sid,
             "fecha_hora": "2026-01-01T10:00:00",
             "humedad_suelo_pct": 30.0,
-        }
-    if plantilla == "/logs/clima/":
-        return {
-            "parcela_id": pid,
-            "fecha_hora": "2026-01-01T10:00:00",
-            "temp_c": 18.0,
         }
     if plantilla == "/tratamientos/":
         return {
@@ -205,10 +191,7 @@ def escenario(client, auth_headers, db_session):
         headers=auth_headers,
     ).json()["id"]
 
-    sid = client.post(
-        f"/parcelas/{pid}/sensores/", json={"etiqueta": "Sensor base"},
-        headers=auth_headers,
-    ).json()["id"]
+    sid = alta_sensor(client, auth_headers, pid, etiqueta="Sensor base")["id"]
 
     disp = DispositivoIoT(
         parcela_id=pid,
@@ -343,10 +326,9 @@ def test_matriz_cubre_todos_los_endpoints_con_ambito_de_parcela():
 
     2. La ruta NO lleva {parcela_id} en el path porque el id de la parcela
        llega por otra via, y por tanto no las encuentra el filtro anterior.
-       Son exactamente 4, listadas aqui a mano porque no hay forma de
+       Son exactamente 3, listadas aqui a mano porque no hay forma de
        descubrirlas por introspeccion de rutas:
          - POST /logs/sensor/    (parcela_id viene en el cuerpo)
-         - POST /logs/clima/     (parcela_id viene en el cuerpo)
          - POST /tratamientos/   (parcela_id viene en el cuerpo)
          - DELETE /tratamientos/{tratamiento_id} (el tratamiento ya
            pertenece a una parcela; el endpoint la resuelve con un query
@@ -359,7 +341,7 @@ def test_matriz_cubre_todos_los_endpoints_con_ambito_de_parcela():
     """
     from app.main import app
 
-    ENDPOINTS_SIN_PARCELA_ID_EN_PATH = 4
+    ENDPOINTS_SIN_PARCELA_ID_EN_PATH = 3
 
     rutas_con_id_en_path = [
         route for route in app.routes

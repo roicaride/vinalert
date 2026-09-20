@@ -1,7 +1,8 @@
+from tests.ayudas import alta_sensor
+
+
 def _crear(client, headers, parcela_id):
-    return client.post(
-        f"/parcelas/{parcela_id}/sensores/", json={"etiqueta": "A"}, headers=headers
-    ).json()
+    return alta_sensor(client, headers, parcela_id, etiqueta="A")
 
 
 def test_configurar_los_campos_nuevos(client, auth_headers, parcela_id):

@@ -56,17 +56,6 @@ def test_una_cantidad_menor_no_borra_nada(client, auth_headers, parcela_id):
     assert len(resp.json()) == 5
 
 
-def test_se_puede_alternar_con_el_alta_de_uno_en_uno(client, auth_headers, parcela_id):
-    _provisionar(client, auth_headers, parcela_id, 3)
-    suelto = client.post(
-        f"/parcelas/{parcela_id}/sensores/", json={"etiqueta": "Suelto"}, headers=auth_headers
-    ).json()
-    assert suelto["numero"] == 4
-
-    resp = _provisionar(client, auth_headers, parcela_id, 6)
-    assert [s["numero"] for s in resp.json()] == [1, 2, 3, 4, 5, 6]
-
-
 def test_cantidad_fuera_de_rango_da_422(client, auth_headers, parcela_id):
     """El tope evita que un error de tecleo cree diez mil filas."""
     assert _provisionar(client, auth_headers, parcela_id, 0).status_code == 422

@@ -16,7 +16,10 @@ beforeEach(() => {
   window.history.replaceState({}, '', '/');
 });
 
-test('sin sesion se ve el login', async () => {
+test('sin sesion, /login ensena el login', async () => {
+  // La raiz ya no es el login: sin sesion ensena la portada (ver
+  // Portada.test.jsx). El login vive en su propia ruta.
+  window.history.replaceState({}, '', '/login');
   render(<App />);
   expect(await screen.findByRole('heading', { name: /acceso/i })).toBeInTheDocument();
 });
@@ -65,7 +68,7 @@ test('el login avisa cuando la sesion ha caducado', async () => {
 function completarYEnviarLogin() {
   fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'a@a.com' } });
   fireEvent.change(screen.getByLabelText(/contraseña/i), { target: { value: 'secreto' } });
-  fireEvent.click(screen.getByRole('button', { name: /entrar/i }));
+  fireEvent.click(screen.getByRole('button', { name: /iniciar sesión/i }));
 }
 
 test('tras entrar sin sesion a una ruta protegida, el login te devuelve a ella (canal del state)', async () => {

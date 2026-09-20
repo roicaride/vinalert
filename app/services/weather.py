@@ -2,20 +2,20 @@
 Capa de abstracción para proveedores meteorológicos.
 
 Para cambiar de proveedor basta con:
-  1. Crear una clase que herede de WeatherProvider e implemente los cuatro
-     métodos abstractos: fetch(), fetch_diario(), fetch_archivo() y ping().
+  1. Crear una clase que herede de WeatherProvider e implemente los dos
+     métodos abstractos: fetch() y fetch_diario().
   2. Registrarla en _REGISTRY.
   3. Cambiar WEATHER_PROVIDER en el .env.
 
 El dict que devuelve fetch() debe mapear exactamente a los campos de LogClima.
-Las listas de dicts que devuelven fetch_diario() y fetch_archivo() deben
+La lista de dicts que devuelve fetch_diario() debe
 mapear exactamente a los campos de ClimaDiario (agregados diarios, uno por
 fecha; ver el docstring de cada método para el contrato completo).
 """
 
 import os
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
 from zoneinfo import ZoneInfo
 
@@ -59,16 +59,14 @@ class WeatherProvider(ABC):
         """
 
     @abstractmethod
-    def fetch_archivo(self, lat: float, lon: float, desde, hasta) -> list:
+    def fetch_horario(self, lat: float, lon: float, horas_atras: int = 48, horas_adelante: int = 48) -> list:
         """
-        Igual que fetch_diario() pero contra el archivo histórico, para el
-        rango [desde, hasta] (inclusive). Mismo contrato de campos que
-        fetch_diario(); fuente debe marcarse como "archivo".
+        Lluvia (mm), probabilidad de lluvia (%), ET₀ (mm) y temperatura (°C)
+        de cada hora, desde `horas_atras` hasta `horas_adelante`. Una lista de
+        dicts {fecha_hora, lluvia_mm, prob_lluvia_pct, et0_mm, temp_c}, con
+        fecha_hora en hora local sin zona. Cada valor de lluvia/ET₀ es el
+        acumulado de la hora anterior a fecha_hora.
         """
-
-    @abstractmethod
-    def ping(self) -> bool:
-        """Comprueba conectividad con el proveedor. Devuelve True si OK."""
 
 
 # ─── Open-Meteo ───────────────────────────────────────────────────────────────
@@ -81,13 +79,12 @@ class OpenMeteoProvider(WeatherProvider):
     """
 
     BASE_URL = "https://api.open-meteo.com/v1/forecast"
-    ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
-    TIMEOUT = 25  # segundos (para consultas historicas de varios meses)
+    TIMEOUT = 25  # segundos
 
     # Todas verificadas contra la API real en una sola llamada a `current`.
     _CURRENT_VARS = [
         "temperature_2m", "relative_humidity_2m", "surface_pressure",
-        "wind_speed_10m", "rain", "uv_index", "et0_fao_evapotranspiration",
+        "wind_speed_10m", "precipitation", "uv_index", "et0_fao_evapotranspiration",
         "vapour_pressure_deficit", "dew_point_2m", "shortwave_radiation",
         "cloud_cover", "wind_gusts_10m", "wind_direction_10m", "sunshine_duration",
         "soil_temperature_0cm", "soil_temperature_6cm", "soil_temperature_18cm",
@@ -101,7 +98,9 @@ class OpenMeteoProvider(WeatherProvider):
         "relative_humidity_2m": "humedad_relativa_pct",
         "surface_pressure": "presion_hpa",
         "wind_speed_10m": "viento_vel_ms",
-        "rain": "lluvia_mm",
+        # `precipitation` y no `rain`: `rain` deja fuera los chubascos. Es un
+        # acumulado de los 15 minutos anteriores, no la lluvia del dia.
+        "precipitation": "lluvia_mm",
         "uv_index": "uv_index",
         "et0_fao_evapotranspiration": "et0",
         "vapour_pressure_deficit": "vpd_kpa",
@@ -216,15 +215,31 @@ class OpenMeteoProvider(WeatherProvider):
         }
         return self._pedir_diario(self.BASE_URL, params, fuente="pronostico")
 
-    def fetch_archivo(self, lat: float, lon: float, desde, hasta) -> list:
-        """Agregados diarios del archivo histórico."""
+    _HORARIO = {
+        "precipitation": "lluvia_mm",
+        "precipitation_probability": "prob_lluvia_pct",
+        "et0_fao_evapotranspiration": "et0_mm",
+        "temperature_2m": "temp_c",
+    }
+
+    def fetch_horario(self, lat: float, lon: float, horas_atras: int = 48, horas_adelante: int = 48) -> list:
+        """Pasado y prevision hora a hora en una sola consulta; no se guarda."""
         params = {
             "latitude": lat, "longitude": lon,
-            "daily": ",".join(self._DAILY_VARS),
-            "start_date": desde.isoformat(), "end_date": hasta.isoformat(),
-            "wind_speed_unit": "ms", "timezone": "auto",
+            "hourly": ",".join(self._HORARIO),
+            "past_hours": horas_atras, "forecast_hours": horas_adelante,
+            "timezone": "auto",
         }
-        return self._pedir_diario(self.ARCHIVE_URL, params, fuente="archivo")
+        resp = requests.get(self.BASE_URL, params=params, timeout=self.TIMEOUT)
+        resp.raise_for_status()
+        hourly = resp.json().get("hourly", {})
+
+        filas = []
+        for i, instante in enumerate(hourly.get("time", [])):
+            fila = {columna: self._num(self._en(hourly, clave, i)) for clave, columna in self._HORARIO.items()}
+            fila["fecha_hora"] = datetime.strptime(instante, "%Y-%m-%dT%H:%M")
+            filas.append(fila)
+        return filas
 
     def _pedir_diario(self, url: str, params: dict, fuente: str) -> list:
         resp = requests.get(url, params=params, timeout=self.TIMEOUT)
@@ -252,18 +267,6 @@ class OpenMeteoProvider(WeatherProvider):
     def _en(daily: dict, clave: str, idx: int):
         valores = daily.get(clave, [])
         return valores[idx] if idx < len(valores) else None
-
-    def ping(self) -> bool:
-        try:
-            # Llamada mínima: Madrid, 1 día, solo temperatura actual
-            resp = requests.get(
-                self.BASE_URL,
-                params={"latitude": 40.4, "longitude": -3.7, "current": "temperature_2m", "forecast_days": 1},
-                timeout=self.TIMEOUT,
-            )
-            return resp.status_code == 200
-        except Exception:
-            return False
 
     # ── helpers ──────────────────────────────────────────────────────────────
 

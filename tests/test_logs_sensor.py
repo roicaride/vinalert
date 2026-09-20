@@ -1,3 +1,6 @@
+from tests.ayudas import alta_sensor
+
+
 def test_crear_log_sensor_requiere_sensor_id(client, auth_headers, parcela_id):
     resp = client.post(
         "/logs/sensor/",
@@ -13,11 +16,7 @@ def test_crear_log_sensor_requiere_sensor_id(client, auth_headers, parcela_id):
 
 
 def test_crear_log_sensor_ok(client, auth_headers, parcela_id):
-    sensor = client.post(
-        f"/parcelas/{parcela_id}/sensores",
-        json={"etiqueta": "Nodo 1"},
-        headers=auth_headers,
-    ).json()
+    sensor = alta_sensor(client, auth_headers, parcela_id, etiqueta="Nodo 1")
 
     resp = client.post(
         "/logs/sensor/",
@@ -41,11 +40,7 @@ def test_crear_log_sensor_con_sensor_de_otra_parcela_falla(client, auth_headers,
     otra_parcela = client.post(
         "/parcelas/", json={"nombre": "Otra parcela"}, headers=auth_headers
     ).json()
-    sensor_otra = client.post(
-        f"/parcelas/{otra_parcela['id']}/sensores",
-        json={"etiqueta": "Nodo ajeno"},
-        headers=auth_headers,
-    ).json()
+    sensor_otra = alta_sensor(client, auth_headers, otra_parcela["id"], etiqueta="Nodo ajeno")
 
     resp = client.post(
         "/logs/sensor/",

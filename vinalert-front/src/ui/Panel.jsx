@@ -33,26 +33,6 @@ export function Panel({ titulo, accion, children, className = '', cuerpo = 'p-4'
 }
 
 /**
- * La lista de lecturas: rotulo a la izquierda, cifra a la derecha, linea entre
- * filas. Es el patron que mas se repite en la aplicacion porque es lo que la
- * aplicacion hace —poner un numero al lado de su nombre— y por eso vive aqui
- * y no copiado en cada pantalla.
- */
-export function Lecturas({ children, className = '' }) {
-  return <dl className={`divide-y divide-linea ${className}`}>{children}</dl>;
-}
-
-/** Una fila de `Lecturas`. `tinta` colorea el valor cuando significa algo. */
-export function Lectura({ etiqueta, valor, tinta = 'text-oso', className = '' }) {
-  return (
-    <div className={`flex items-baseline justify-between gap-4 py-2.5 ${className}`}>
-      <dt className="rotulo min-w-0 truncate">{etiqueta}</dt>
-      <dd className={`shrink-0 font-mono text-sm tabular-nums ${tinta}`}>{valor}</dd>
-    </div>
-  );
-}
-
-/**
  * Una cifra destacada: el valor grande, su nombre debajo y, cuando el dato lo
  * trae, la dispersion debajo del nombre.
  *

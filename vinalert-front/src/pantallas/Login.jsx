@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { login, me, registro } from '../api/auth';
 import { MOTIVO_CADUCADA } from '../api/cliente';
@@ -25,7 +25,8 @@ export default function Login() {
   const [params] = useSearchParams();
   const { setUsuario } = useSesion();
 
-  const [modo, setModo] = useState('login'); // 'login' | 'registro'
+  // «Crear cuenta» en la portada llega con ?modo=registro.
+  const [modo, setModo] = useState(params.get('modo') === 'registro' ? 'registro' : 'login');
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -59,10 +60,10 @@ export default function Login() {
       {/* La marca. Lo unico que se ve antes de entrar.                       */}
       {/* ------------------------------------------------------------------ */}
       <section className="flex flex-col justify-between gap-10 bg-lousa px-8 py-10 md:px-12 md:py-14">
-        <div className="flex items-center gap-3">
+        <Link to="/" className="flex w-fit items-center gap-3">
           <CuadroMarca lado={34} tinta="bg-oso" />
           <span className="font-mono text-lg font-medium tracking-[0.06em] text-oso">Viñalert</span>
-        </div>
+        </Link>
 
         <div className="max-w-lg">
           <p className="rotulo">Sensores en campo</p>
@@ -131,28 +132,51 @@ export default function Login() {
               id="password"
               type="password"
               required
+              minLength={modo === 'registro' ? 8 : undefined}
+              ayuda={modo === 'registro' ? 'Mínimo 8 caracteres.' : undefined}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
             />
 
-            <MensajeError
-              error={error}
-              textoNoEncontrado={
-                modo === 'login'
-                  ? 'Email o contraseña incorrectos.'
-                  : 'No se pudo crear la cuenta.'
-              }
-            />
+            {/* Los dos rechazos del registro que tiene sentido explicar: el
+                email repetido (400) y los datos que no pasan la validacion
+                (422, que el backend describe en ingles y campo a campo). */}
+            {modo === 'registro' && error?.response?.status === 400 ? (
+              <Aviso tono="ambar" role="alert">
+                Ya hay una cuenta con ese email.{' '}
+                <button
+                  type="button"
+                  onClick={() => { setModo('login'); setError(null); }}
+                  className="underline underline-offset-2 hover:text-oso"
+                >
+                  Inicia sesión con ella
+                </button>
+                .
+              </Aviso>
+            ) : modo === 'registro' && error?.response?.status === 422 ? (
+              <Aviso tono="sangre" role="alert">
+                Revisa el email y que la contraseña tenga al menos 8 caracteres.
+              </Aviso>
+            ) : (
+              <MensajeError
+                error={error}
+                textoNoEncontrado={
+                  modo === 'login'
+                    ? 'Email o contraseña incorrectos.'
+                    : 'No se pudo crear la cuenta.'
+                }
+              />
+            )}
 
             <Boton tono="solido" type="submit" disabled={enviando} className="w-full">
               {enviando
                 ? modo === 'login'
-                  ? 'Entrando…'
+                  ? 'Iniciando sesión…'
                   : 'Creando cuenta…'
                 : modo === 'login'
-                  ? 'Entrar'
-                  : 'Registrarse y entrar'}
+                  ? 'Iniciar sesión'
+                  : 'Crear cuenta'}
             </Boton>
           </form>
 

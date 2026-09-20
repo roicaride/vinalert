@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
 from typing import Any
-from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -8,7 +7,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..deps import get_current_user, parcela_con_gestion
 from ..models import LogClima, LogSensor, Sensor, Usuario
-from ..schemas import LogClimaCreate, LogClimaResp, LogSensorCreate, LogSensorResp
+from ..schemas import LogSensorCreate, LogSensorResp
 from ..services.weather import TZ_LOCAL, fetch_y_guardar_clima
 
 router = APIRouter(prefix="/logs", tags=["logs"])
@@ -75,20 +74,4 @@ def crear_log_sensor(
         log.punto_rocio_c = clima_reciente.punto_rocio_c
         log.nubosidad_pct = clima_reciente.nubosidad_pct
 
-    return log
-
-
-
-
-@router.post("/clima/", response_model=LogClimaResp, status_code=201)
-def crear_log_clima(
-    body: LogClimaCreate,
-    current_user: Usuario = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> Any:
-    parcela_con_gestion(body.parcela_id, current_user, db)
-    log = LogClima(**body.model_dump())
-    db.add(log)
-    db.commit()
-    db.refresh(log)
     return log

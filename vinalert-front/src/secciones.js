@@ -7,52 +7,16 @@
  * pantallas, y bastara con que alguien toque un fichero y no el otro para que
  * exista una ruta sin enlace, o un enlace que lleva a ninguna parte.
  *
- * `titulo` y `descripcion` los usa el marcador de seccion mientras la pantalla
- * no esta construida; `etiqueta` es el texto corto de la barra lateral.
+ * `etiqueta` es el texto corto de la barra lateral.
  */
 export const SECCIONES = [
-  {
-    ruta: 'estado',
-    etiqueta: 'Estado',
-    titulo: 'Estado',
-    descripcion: 'Cómo está la parcela ahora mismo: humedad y temperatura del suelo, tiempo actual y últimas lecturas.',
-  },
-  {
-    ruta: 'analisis',
-    etiqueta: 'Análisis',
-    titulo: 'Análisis',
-    descripcion: 'Cruzar variables en el tiempo: lo que miden tus sensores contra la lluvia, la ET₀ o la radiación, con los tratamientos marcados encima.',
-  },
-  {
-    ruta: 'tratamientos',
-    etiqueta: 'Tratamientos',
-    titulo: 'Tratamientos',
-    descripcion: 'El cuaderno: qué se aplicó, cuándo y con qué tiempo hacía.',
-  },
-  {
-    ruta: 'foliar',
-    etiqueta: 'Foliar',
-    titulo: 'Foliar',
-    descripcion: 'Lecturas del sensor foliar y subida de su Excel.',
-  },
-  {
-    ruta: 'sensores',
-    etiqueta: 'Sensores',
-    titulo: 'Sensores',
-    descripcion: 'Cuántos hay, dónde está cada uno y a qué profundidad.',
-  },
-  {
-    ruta: 'miembros',
-    etiqueta: 'Acceso',
-    titulo: 'Acceso',
-    descripcion: 'Quién puede ver y gestionar esta parcela.',
-  },
-  {
-    ruta: 'configuracion',
-    etiqueta: 'Configuración',
-    titulo: 'Configuración',
-    descripcion: 'Datos de la parcela y sus coordenadas.',
-  },
+  { ruta: 'estado', etiqueta: 'Estado' },
+  { ruta: 'analisis', etiqueta: 'Análisis' },
+  { ruta: 'tratamientos', etiqueta: 'Tratamientos' },
+  { ruta: 'foliar', etiqueta: 'Foliar' },
+  { ruta: 'sensores', etiqueta: 'Sensores' },
+  { ruta: 'miembros', etiqueta: 'Acceso' },
+  { ruta: 'configuracion', etiqueta: 'Configuración' },
 ];
 
 /** La seccion a la que se entra al abrir una parcela. */

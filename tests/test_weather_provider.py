@@ -94,3 +94,23 @@ def test_el_dict_encaja_en_el_modelo(db_session, parcela_id):
     db_session.add(log)
     db_session.commit()
     assert log.id is not None
+
+
+def test_la_lluvia_actual_cuenta_los_chubascos():
+    """
+    `rain` en Open-Meteo es solo la lluvia de sistemas grandes: los chubascos
+    van en `showers`. `precipitation` es la suma de todo, y es la misma
+    variable que ya usan los totales diarios (precipitation_sum).
+    """
+    respuesta = {**RESPUESTA, "current": {**RESPUESTA["current"], "rain": 0.2, "precipitation": 0.6}}
+
+    class _R(_Resp):
+        def json(self):
+            return respuesta
+
+    with patch("app.services.weather.requests.get", return_value=_R()):
+        datos = OpenMeteoProvider().fetch(41.65, -4.72)
+
+    assert datos["lluvia_mm"] == 0.6
+    assert "precipitation" in OpenMeteoProvider._CURRENT_VARS
+    assert "rain" not in OpenMeteoProvider._CURRENT_VARS

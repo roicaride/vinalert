@@ -59,14 +59,14 @@ test('tras guardar, el formulario refleja lo que devuelve el backend', async () 
   // guardo puede quedarse con el valor viejo del lado del servidor. El
   // formulario tiene que reflejar lo que el backend realmente devuelve, no
   // lo que el usuario submitio.
-  editarParcela.mockResolvedValue({ ...PARCELA_GESTOR, kc_actual: 0.8 });
+  editarParcela.mockResolvedValue({ ...PARCELA_GESTOR, superficie_total_m2: 15000 });
   montar(PARCELA_GESTOR);
 
-  const kc = await screen.findByLabelText('Kc actual');
-  await userEvent.clear(kc);
+  const superficie = await screen.findByLabelText('Superficie total (m²)');
+  await userEvent.clear(superficie);
   await userEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
 
-  await waitFor(() => expect(kc).toHaveValue(0.8));
+  await waitFor(() => expect(superficie).toHaveValue(15000));
 });
 
 test('un lector ve el formulario pero no puede tocarlo', async () => {

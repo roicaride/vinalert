@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 
-from app.models import ClimaDiario, SueloDiario
+from app.models import ClimaDiario
 
 
 def test_clima_diario_devuelve_ordenado(client, auth_headers, parcela_id, db_session):
@@ -28,32 +28,6 @@ def test_clima_diario_filtra_por_dias(client, auth_headers, parcela_id, db_sessi
     db_session.commit()
 
     resp = client.get(f"/parcelas/{parcela_id}/clima/diario", params={"dias": 7}, headers=auth_headers)
-    assert len(resp.json()) == 1
-
-
-def test_suelo_diario_devuelve_ordenado(client, auth_headers, parcela_id, db_session):
-    hoy = date.today()
-    db_session.add_all([
-        SueloDiario(parcela_id=parcela_id, fecha=hoy - timedelta(days=2), humedad_media=30.0, n_sensores=2),
-        SueloDiario(parcela_id=parcela_id, fecha=hoy - timedelta(days=1), humedad_media=32.0, n_sensores=2),
-    ])
-    db_session.commit()
-
-    resp = client.get(f"/parcelas/{parcela_id}/suelo/diario", headers=auth_headers)
-    assert resp.status_code == 200
-    lista = resp.json()
-    assert [f["humedad_media"] for f in lista] == [30.0, 32.0]
-
-
-def test_suelo_diario_filtra_por_dias(client, auth_headers, parcela_id, db_session):
-    hoy = date.today()
-    db_session.add_all([
-        SueloDiario(parcela_id=parcela_id, fecha=hoy - timedelta(days=40), humedad_media=20.0, n_sensores=2),
-        SueloDiario(parcela_id=parcela_id, fecha=hoy - timedelta(days=2), humedad_media=32.0, n_sensores=2),
-    ])
-    db_session.commit()
-
-    resp = client.get(f"/parcelas/{parcela_id}/suelo/diario", params={"dias": 7}, headers=auth_headers)
     assert len(resp.json()) == 1
 
 
@@ -87,21 +61,6 @@ def test_clima_diario_limite_fuera_de_rango_da_422(client, auth_headers, parcela
     assert resp.status_code == 422
     resp = client.get(f"/parcelas/{parcela_id}/clima/diario", params={"limite": 5001}, headers=auth_headers)
     assert resp.status_code == 422
-
-
-def test_suelo_diario_respeta_el_limite(client, auth_headers, parcela_id, db_session):
-    hoy = date.today()
-    db_session.add_all([
-        SueloDiario(parcela_id=parcela_id, fecha=hoy - timedelta(days=i), humedad_media=float(i), n_sensores=1)
-        for i in range(5)
-    ])
-    db_session.commit()
-
-    resp = client.get(f"/parcelas/{parcela_id}/suelo/diario", params={"limite": 2}, headers=auth_headers)
-    assert resp.status_code == 200
-    lista = resp.json()
-    assert len(lista) == 2
-    assert lista[-1]["fecha"] == str(hoy)
 
 
 def test_clima_diario_filtra_dias_incluye_el_borde(client, auth_headers, parcela_id, db_session):

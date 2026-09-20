@@ -15,6 +15,16 @@ export const USUARIO = {
 
 export const USUARIO_ADMIN = { ...USUARIO, id: 9, email: 'admin@vinalert.dev', rol: 'admin' };
 
+/** El administrador maestro: el unico que ve Administracion y los ESP32. */
+export const USUARIO_SUPERADMIN = { ...USUARIO_ADMIN, es_superadmin: true };
+
+/** Respuesta de GET /admin/usuarios: de la alta mas reciente a la mas antigua. */
+export const CUENTAS = [
+  { id: 12, nombre: 'Marta Ferreiro', email: 'marta@vinalert.dev', telefono: null, rol: 'agricultor', creado_en: '2026-09-18T10:15:00', n_parcelas: 2 },
+  { id: 11, nombre: 'Xoán Otero', email: 'xoan@viticultores.gal', telefono: '600000000', rol: 'agricultor', creado_en: '2026-09-02T18:40:00', n_parcelas: 0 },
+  { id: 9, nombre: 'Admin', email: 'admin@vinalert.dev', telefono: null, rol: 'admin', creado_en: null, n_parcelas: 5 },
+];
+
 export const DISPOSITIVO = {
   id: 3,
   parcela_id: 1,
@@ -87,6 +97,24 @@ export const DASHBOARD = {
     lluvia_mm: 0,
     et0: 3.2,
     viento_racha_ms: 4.1,
+    lluvia_prev_24h_mm: 3.4,
+    prob_lluvia_24h_pct: 70,
+    lluvia_prev_48h_mm: 0,
+    prob_lluvia_48h_pct: 15,
+    punto_rocio_c: 12.1,
+    vpd_kpa: 1.8,
+    nubosidad_pct: 23,
+    uv_index: 1.2,
+    presion_hpa: 1002.3,
+    viento_vel_ms: 4.33,
+    viento_dir_deg: 7,
+    suelo_temp_0cm: 22.5,
+    suelo_temp_6cm: 24.1,
+    suelo_temp_18cm: 21.2,
+    suelo_hum_0_1cm: 0.199,
+    suelo_hum_1_3cm: 0.206,
+    suelo_hum_3_9cm: 0.22,
+    suelo_hum_9_27cm: 0.244,
   },
 };
 
@@ -143,37 +171,23 @@ export const LECTURA_FOLIAR = {
   archivo_origen: 'foliar_15ago.xlsx',
 };
 
+/**
+ * Respuesta de GET /suelo/diario: una fila por dia y sensor. El sensor 1
+ * manda 10 veces mas que el 2; la media justa de humedad del periodo es
+ * (31 + 21) / 2 = 26 %, y la de temperatura (19 + 16) / 2 = 17.5 °C.
+ */
 export const SUELO_DIARIO = [
-  {
-    id: 1,
-    parcela_id: 1,
-    fecha: '2026-08-14',
-    humedad_media: 27.2,
-    humedad_sd: 1.8,
-    humedad_max: 30.1,
-    humedad_min: 24.5,
-    temperatura_media: 18.5,
-    temperatura_sd: 1.2,
-    temperatura_max: 22.0,
-    temperatura_min: 15.0,
-    n_sensores: 3,
-    n_lecturas: 144,
-  },
-  {
-    id: 2,
-    parcela_id: 1,
-    fecha: '2026-08-15',
-    humedad_media: 29.5,
-    humedad_sd: 2.0,
-    humedad_max: 32.4,
-    humedad_min: 26.8,
-    temperatura_media: 19.1,
-    temperatura_sd: 1.4,
-    temperatura_max: 23.5,
-    temperatura_min: 15.8,
-    n_sensores: 3,
-    n_lecturas: 144,
-  },
+  { fecha: '2026-08-14', sensor_id: 1, sensor_numero: 1, profundidad_cm: 20, humedad_media: 30, humedad_max: 31, humedad_min: 29, temperatura_media: 18, temperatura_max: 19, temperatura_min: 17, n_lecturas: 100 },
+  { fecha: '2026-08-14', sensor_id: 2, sensor_numero: 2, profundidad_cm: 40, humedad_media: 20, humedad_max: 21, humedad_min: 19, temperatura_media: 16, temperatura_max: 17, temperatura_min: 15, n_lecturas: 10 },
+  { fecha: '2026-08-15', sensor_id: 1, sensor_numero: 1, profundidad_cm: 20, humedad_media: 32, humedad_max: 33, humedad_min: 31, temperatura_media: 20, temperatura_max: 21, temperatura_min: 19, n_lecturas: 100 },
+  { fecha: '2026-08-15', sensor_id: 2, sensor_numero: 2, profundidad_cm: 40, humedad_media: 22, humedad_max: 23, humedad_min: 21, temperatura_media: 16, temperatura_max: 17, temperatura_min: 15, n_lecturas: 10 },
+];
+
+/** Los sensores de la parcela de prueba: dos activos y uno dado de baja. */
+export const SENSORES_PARCELA = [
+  { id: 1, parcela_id: 1, numero: 1, etiqueta: 'Sonda 1', activo: true, profundidad_cm: 20, latitud: null, longitud: null, modelo: null },
+  { id: 2, parcela_id: 1, numero: 2, etiqueta: 'Sonda 2', activo: true, profundidad_cm: 40, latitud: null, longitud: null, modelo: null },
+  { id: 3, parcela_id: 1, numero: 3, etiqueta: 'Sonda 3', activo: false, profundidad_cm: 60, latitud: null, longitud: null, modelo: null },
 ];
 
 export const CLIMA_DIARIO = [
@@ -214,3 +228,22 @@ export const CLIMA_DIARIO = [
 
 
 
+
+/**
+ * Respuesta de GET /parcelas/{id}/clima/horario: 3 horas pasadas y 30 de
+ * prevision. Las 24 primeras de prevision suman 2.4 mm (prob. max. 40 %); las
+ * 6 siguientes, 6 mm mas (prob. 90 %), asi que las 48 h llegan a 8.4 mm.
+ */
+export const CLIMA_HORARIO = [
+  { fecha_hora: '2026-09-18T08:00:00', lluvia_mm: 0.5, prob_lluvia_pct: null, et0_mm: 0.2, temp_c: 17.0, prevision: false },
+  { fecha_hora: '2026-09-18T09:00:00', lluvia_mm: 1.0, prob_lluvia_pct: null, et0_mm: 0.3, temp_c: 18.0, prevision: false },
+  { fecha_hora: '2026-09-18T10:00:00', lluvia_mm: 0, prob_lluvia_pct: null, et0_mm: 0.1, temp_c: 19.0, prevision: false },
+  ...Array.from({ length: 30 }, (_, i) => ({
+    fecha_hora: new Date(Date.UTC(2026, 8, 18, 11 + i)).toISOString().slice(0, 19),
+    lluvia_mm: i < 24 ? 0.1 : 1.0,
+    prob_lluvia_pct: i < 24 ? 40 : 90,
+    et0_mm: 0.1,
+    temp_c: 18.0,
+    prevision: true,
+  })),
+];

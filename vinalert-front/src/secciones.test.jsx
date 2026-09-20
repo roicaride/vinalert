@@ -19,15 +19,12 @@ beforeEach(() => {
   window.history.replaceState({}, '', '/');
 });
 
-test('cada seccion declara los cuatro campos que consumen sus dos usuarios', () => {
-  // La barra lateral usa `etiqueta`; el marcador de seccion usa `titulo` y
-  // `descripcion`; las rutas usan `ruta`. Si alguien anade una seccion a medias,
-  // falla aqui y no en la pantalla.
+test('cada seccion declara su ruta y su etiqueta', () => {
+  // Las rutas usan `ruta` y la barra lateral usa `etiqueta`. Si alguien anade
+  // una seccion a medias, falla aqui y no en la pantalla.
   for (const s of SECCIONES) {
     expect(s.ruta, `seccion sin ruta: ${JSON.stringify(s)}`).toBeTruthy();
     expect(s.etiqueta, `seccion ${s.ruta} sin etiqueta`).toBeTruthy();
-    expect(s.titulo, `seccion ${s.ruta} sin titulo`).toBeTruthy();
-    expect(s.descripcion, `seccion ${s.ruta} sin descripcion`).toBeTruthy();
   }
 });
 

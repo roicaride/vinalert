@@ -107,11 +107,18 @@ export default function AppLayout() {
         <aside className="flex shrink-0 flex-col justify-between border-b border-linea md:w-56 md:border-r md:border-b-0">
           <Navegacion parcelaId={parcelaId} />
 
-          {esAdmin && (
-            <div className="hidden border-t border-linea p-4 md:block">
-              <Boton tono="fantasma" className="w-full" onClick={() => navigate('/parcelas')}>
-                Nueva parcela
-              </Boton>
+          {(esAdmin || usuario?.es_superadmin) && (
+            <div className="hidden space-y-2 border-t border-linea p-4 md:block">
+              {esAdmin && (
+                <Boton tono="fantasma" className="w-full" onClick={() => navigate('/parcelas')}>
+                  Nueva parcela
+                </Boton>
+              )}
+              {usuario?.es_superadmin && (
+                <Boton tono="sutil" className="w-full" onClick={() => navigate('/admin')}>
+                  Administración
+                </Boton>
+              )}
             </div>
           )}
         </aside>

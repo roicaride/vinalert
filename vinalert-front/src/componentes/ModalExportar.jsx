@@ -4,9 +4,18 @@ import { obtenerHistorico } from '../api/estado';
 import { listarFoliar } from '../api/foliar';
 import { listarTratamientos } from '../api/tratamientos';
 import { descargarCsv, exportarExcelMultilibro } from '../utils/exportar';
+import { diarioSuelo } from '../pantallas/analisis/series';
 import { CuadroMarca } from '../marca/Marca';
 import Boton, { Enlace } from '../ui/Boton';
 import { Aviso } from '../ui/Estados';
+
+/**
+ * Open-Meteo da la humedad del suelo en m³/m³ (0.199); las sondas, en %
+ * (19.9). Se exporta en % para que las dos columnas se puedan comparar.
+ */
+function porcentaje(fraccion) {
+  return fraccion == null ? null : Number((fraccion * 100).toFixed(1));
+}
 
 export default function ModalExportar({ parcela, abierto, alCerrar }) {
   const [opcion, setOpcion] = useState('todo'); // 'todo' | 'analisis' | 'estado' | 'tratamientos' | 'foliar'
@@ -33,13 +42,19 @@ export default function ModalExportar({ parcela, abierto, alCerrar }) {
 
       // Preparar Pestaña 1: Análisis Diario
       const mapaDiario = new Map();
-      (suelo ?? []).forEach((s) => {
-        if (!mapaDiario.has(s.fecha)) mapaDiario.set(s.fecha, { fecha: s.fecha });
-        const f = mapaDiario.get(s.fecha);
-        f.humedad_media = s.humedad_media;
-        f.humedad_min = s.humedad_min;
-        f.humedad_max = s.humedad_max;
-        f.temp_suelo = s.temperatura_media;
+      // Media justa de TODOS los sensores de cada dia: la misma que Analisis
+      // por defecto. Maximo y minimo, los extremos entre sensores.
+      const idsSuelo = [...new Set((suelo ?? []).map((s) => s.sensor_id))];
+      diarioSuelo(suelo ?? [], idsSuelo).forEach((d) => {
+        if (!mapaDiario.has(d.fecha)) mapaDiario.set(d.fecha, { fecha: d.fecha });
+        const f = mapaDiario.get(d.fecha);
+        const delDia = (suelo ?? []).filter((s) => s.fecha === d.fecha);
+        f.humedad_media = d.humedad_media;
+        f.humedad_min = Math.min(...delDia.map((s) => s.humedad_min ?? Infinity));
+        f.humedad_max = Math.max(...delDia.map((s) => s.humedad_max ?? -Infinity));
+        if (!Number.isFinite(f.humedad_min)) f.humedad_min = null;
+        if (!Number.isFinite(f.humedad_max)) f.humedad_max = null;
+        f.temp_suelo = d.temperatura_suelo;
       });
       (clima ?? []).forEach((c) => {
         if (!mapaDiario.has(c.fecha)) mapaDiario.set(c.fecha, { fecha: c.fecha });
@@ -50,6 +65,18 @@ export default function ModalExportar({ parcela, abierto, alCerrar }) {
         f.temp_aire_max = c.temp_max;
         f.temp_aire_min = c.temp_min;
         f.radiacion_mj = c.radiacion_total_mj_m2;
+        f.hr_media = c.humedad_relativa_media;
+        f.hr_max = c.humedad_relativa_max;
+        f.hr_min = c.humedad_relativa_min;
+        f.punto_rocio = c.punto_rocio_medio;
+        f.vpd_max = c.vpd_max;
+        f.horas_sol = c.horas_sol != null ? Number(c.horas_sol.toFixed(2)) : null;
+        f.viento_media = c.viento_vel_media;
+        f.viento_racha = c.viento_racha_max;
+        f.viento_dir = c.viento_dir_dominante;
+        f.hoja_mojada = c.humectacion_foliar_pct;
+        f.suelo_modelo_hum = porcentaje(c.suelo_modelo_humedad);
+        f.suelo_modelo_temp = c.suelo_modelo_temp;
       });
       (tratamientos ?? []).forEach((t) => {
         const fechaStr = (t.fecha || '').slice(0, 10);
@@ -83,6 +110,18 @@ export default function ModalExportar({ parcela, abierto, alCerrar }) {
           d.temp_aire_med ?? '',
           d.temp_aire_max ?? '',
           d.temp_aire_min ?? '',
+          d.hr_media ?? '',
+          d.hr_max ?? '',
+          d.hr_min ?? '',
+          d.punto_rocio ?? '',
+          d.vpd_max ?? '',
+          d.horas_sol ?? '',
+          d.viento_media ?? '',
+          d.viento_racha ?? '',
+          d.viento_dir ?? '',
+          d.hoja_mojada ?? '',
+          d.suelo_modelo_hum ?? '',
+          d.suelo_modelo_temp ?? '',
           d.tratamiento ?? '',
           d.nbi ?? '',
           d.chl ?? '',
@@ -102,6 +141,18 @@ export default function ModalExportar({ parcela, abierto, alCerrar }) {
         'Temp Aire Media (°C)',
         'Temp Aire Máx (°C)',
         'Temp Aire Mín (°C)',
+        'Humedad Aire Media (%)',
+        'Humedad Aire Máx (%)',
+        'Humedad Aire Mín (%)',
+        'Punto Rocío Medio (°C)',
+        'VPD Máx (kPa)',
+        'Horas de Sol (h)',
+        'Viento Medio (m/s)',
+        'Racha Máx (m/s)',
+        'Dirección Viento Dominante (°)',
+        'Hoja Mojada (probabilidad %)',
+        'Humedad Suelo Modelo 0-7 cm (%)',
+        'Temp Suelo Modelo 0-7 cm (°C)',
         'Tratamientos Fitosanitarios',
         'NBI Foliar (Nitrógeno)',
         'Clorofila Foliar',
@@ -118,8 +169,8 @@ export default function ModalExportar({ parcela, abierto, alCerrar }) {
         'Batería (V)',
         'Temp Ambiente (°C)',
         'Humedad Aire (%)',
-        'Lluvia Momento (mm)',
-        'ET₀ Momento (mm)',
+        'Lluvia últimos 15 min (mm)',
+        'ET₀ últimos 15 min (mm)',
         'Viento (m/s)',
         'Racha Viento (m/s)',
         'Dirección Viento (°)',
@@ -128,6 +179,15 @@ export default function ModalExportar({ parcela, abierto, alCerrar }) {
         'VPD (kPa)',
         'Punto Rocío (°C)',
         'Nubosidad (%)',
+        'Índice UV',
+        'Sol en el Intervalo (s)',
+        'Temp Suelo Modelo 0 cm (°C)',
+        'Temp Suelo Modelo 6 cm (°C)',
+        'Temp Suelo Modelo 18 cm (°C)',
+        'Humedad Suelo Modelo 0-1 cm (%)',
+        'Humedad Suelo Modelo 1-3 cm (%)',
+        'Humedad Suelo Modelo 3-9 cm (%)',
+        'Humedad Suelo Modelo 9-27 cm (%)',
       ];
       const filasTelemetria = (historico ?? []).map((log) => [
         log.fecha_hora ? new Date(log.fecha_hora).toLocaleString('es-ES') : '',
@@ -148,6 +208,15 @@ export default function ModalExportar({ parcela, abierto, alCerrar }) {
         log.vpd_kpa ?? '',
         log.punto_rocio_c ?? '',
         log.nubosidad_pct ?? '',
+        log.uv_index ?? '',
+        log.duracion_sol_s ?? '',
+        log.suelo_temp_0cm ?? '',
+        log.suelo_temp_6cm ?? '',
+        log.suelo_temp_18cm ?? '',
+        porcentaje(log.suelo_hum_0_1cm) ?? '',
+        porcentaje(log.suelo_hum_1_3cm) ?? '',
+        porcentaje(log.suelo_hum_3_9cm) ?? '',
+        porcentaje(log.suelo_hum_9_27cm) ?? '',
       ]);
 
       // Preparar Pestaña 3: Cuaderno de Tratamientos
@@ -231,11 +300,30 @@ export default function ModalExportar({ parcela, abierto, alCerrar }) {
         f.archivo_origen ?? '',
       ]);
 
+      // Pestaña: Suelo por sensor (una fila por dia y sensor)
+      const cabecerasSueloSensor = [
+        'Fecha', 'Sensor', 'Profundidad (cm)', 'Humedad Media (%)', 'Humedad Máx (%)', 'Humedad Mín (%)',
+        'Temp Media (°C)', 'Temp Máx (°C)', 'Temp Mín (°C)', 'Nº Lecturas',
+      ];
+      const filasSueloSensor = (suelo ?? []).map((s) => [
+        s.fecha,
+        `S${s.sensor_numero}`,
+        s.profundidad_cm ?? '',
+        s.humedad_media ?? '',
+        s.humedad_max ?? '',
+        s.humedad_min ?? '',
+        s.temperatura_media ?? '',
+        s.temperatura_max ?? '',
+        s.temperatura_min ?? '',
+        s.n_lecturas ?? '',
+      ]);
+
       // Exportar según la opción seleccionada
       if (formato === 'xlsx') {
         const pestanas = [];
         if (opcion === 'todo' || opcion === 'analisis') {
           pestanas.push({ nombre: 'Análisis Diario', cabeceras: cabecerasAnalisis, filas: filasAnalisis });
+          pestanas.push({ nombre: 'Suelo por sensor', cabeceras: cabecerasSueloSensor, filas: filasSueloSensor });
         }
         if (opcion === 'todo' || opcion === 'estado') {
           pestanas.push({ nombre: 'Telemetría y Clima', cabeceras: cabecerasTelemetria, filas: filasTelemetria });

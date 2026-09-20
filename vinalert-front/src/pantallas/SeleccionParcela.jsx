@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 
 import { crearParcela } from '../api/parcelas';
 import MensajeError from '../errores/MensajeError';
-import { CuadroMarca, Firma } from '../marca/Marca';
+import CabeceraCuenta from '../layout/CabeceraCuenta';
+import { CuadroMarca } from '../marca/Marca';
 import { useSesion } from '../sesion/SesionContext';
-import Boton, { Enlace } from '../ui/Boton';
+import Boton from '../ui/Boton';
 import Campo from '../ui/Campo';
 import { Marbete, Vacio } from '../ui/Estados';
 import { Encabezado } from '../ui/Panel';
@@ -20,7 +21,7 @@ import { Encabezado } from '../ui/Panel';
  */
 export default function SeleccionParcela({ parcelas }) {
   const navigate = useNavigate();
-  const { usuario, cerrarSesion } = useSesion();
+  const { usuario } = useSesion();
 
   const [mostrandoCrear, setMostrandoCrear] = useState(false);
   const [nombre, setNombre] = useState('');
@@ -58,23 +59,7 @@ export default function SeleccionParcela({ parcelas }) {
 
   return (
     <div className="flex min-h-screen flex-col bg-lousa text-oso">
-      <header className="flex shrink-0 flex-wrap items-stretch justify-between border-b border-linea">
-        <div className="flex items-center border-r border-linea px-5 py-3">
-          <Firma />
-        </div>
-        <div className="flex items-stretch">
-          <div className="hidden items-center gap-3 border-l border-linea px-5 py-3 sm:flex">
-            {esAdmin && <Marbete tono="ambar">Administrador</Marbete>}
-            <div className="min-w-0">
-              <p className="truncate text-sm leading-tight text-oso">{usuario?.nombre}</p>
-              <p className="mt-0.5 truncate font-mono text-[11px] text-oso-3">{usuario?.email}</p>
-            </div>
-          </div>
-          <div className="flex items-center border-l border-linea px-5 py-3">
-            <Enlace onClick={() => { cerrarSesion(); navigate('/login'); }}>Cerrar sesión</Enlace>
-          </div>
-        </div>
-      </header>
+      <CabeceraCuenta />
 
       <Encabezado
         titulo={esAdmin ? 'Todas las parcelas' : 'Elige una parcela'}

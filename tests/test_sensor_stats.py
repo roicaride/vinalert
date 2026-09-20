@@ -59,3 +59,27 @@ def test_maximos_y_minimos_son_none_sin_lecturas():
     assert r["humedad_min"] is None
     assert r["temperatura_max"] is None
     assert r["temperatura_min"] is None
+
+
+def test_media_justa_es_la_media_de_las_medias_de_cada_sensor():
+    from app.services.sensor_stats import media_justa
+
+    # A manda 3 lecturas (30, 30, 30) y B una (10). Por lectura saldria 25;
+    # la media justa es (30 + 10) / 2 = 20.
+    assert media_justa([(1, 30.0), (1, 30.0), (1, 30.0), (2, 10.0)]) == 20.0
+
+
+def test_media_justa_ignora_los_nulos_y_sin_datos_devuelve_none():
+    from app.services.sensor_stats import media_justa
+
+    assert media_justa([(1, None), (2, 12.0)]) == 12.0
+    assert media_justa([]) is None
+    assert media_justa([(1, None)]) is None
+
+
+def test_media_justa_pondera_dentro_de_cada_sensor():
+    from app.services.sensor_stats import media_justa
+
+    # Sensor 1: un dia a 30 con 100 lecturas y otro a 32 con 100 -> 31.
+    # Sensor 2: 20 con 10 lecturas y 22 con 10 -> 21. Justa: 26.
+    assert media_justa([(1, 30.0, 100), (1, 32.0, 100), (2, 20.0, 10), (2, 22.0, 10)]) == 26.0

@@ -2,6 +2,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 
 from app.models import Parcela, Sensor
+from tests.ayudas import alta_sensor
 
 
 def _parcela(db_session, nombre="P1"):
@@ -13,24 +14,11 @@ def _parcela(db_session, nombre="P1"):
 
 
 def test_el_primer_sensor_de_una_parcela_es_el_numero_1(client, auth_headers, parcela_id):
-    resp = client.post(
-        f"/parcelas/{parcela_id}/sensores/",
-        json={"etiqueta": "Nodo A"},
-        headers=auth_headers,
-    )
-    assert resp.status_code == 201
-    assert resp.json()["numero"] == 1
+    assert alta_sensor(client, auth_headers, parcela_id)["numero"] == 1
 
 
 def test_la_numeracion_es_consecutiva(client, auth_headers, parcela_id):
-    numeros = []
-    for i in range(3):
-        resp = client.post(
-            f"/parcelas/{parcela_id}/sensores/",
-            json={"etiqueta": f"Nodo {i}"},
-            headers=auth_headers,
-        )
-        numeros.append(resp.json()["numero"])
+    numeros = [alta_sensor(client, auth_headers, parcela_id)["numero"] for _ in range(3)]
     assert numeros == [1, 2, 3]
 
 
@@ -38,11 +26,8 @@ def test_dos_parcelas_pueden_tener_ambas_un_sensor_numero_1(client, auth_headers
     """El numero es unico DENTRO de la parcela, no globalmente."""
     otra = client.post("/parcelas/", json={"nombre": "Otra"}, headers=auth_headers).json()["id"]
 
-    a = client.post(f"/parcelas/{parcela_id}/sensores/", json={"etiqueta": "A"}, headers=auth_headers)
-    b = client.post(f"/parcelas/{otra}/sensores/", json={"etiqueta": "B"}, headers=auth_headers)
-
-    assert a.json()["numero"] == 1
-    assert b.json()["numero"] == 1
+    assert alta_sensor(client, auth_headers, parcela_id)["numero"] == 1
+    assert alta_sensor(client, auth_headers, otra)["numero"] == 1
 
 
 def test_desactivar_un_sensor_no_libera_su_numero(client, auth_headers, parcela_id):
@@ -50,30 +35,15 @@ def test_desactivar_un_sensor_no_libera_su_numero(client, auth_headers, parcela_
     Reutilizar el numero mezclaria bajo un mismo identificador las lecturas
     historicas del nodo viejo y las del nuevo.
     """
-    primero = client.post(
-        f"/parcelas/{parcela_id}/sensores/", json={"etiqueta": "A"}, headers=auth_headers
-    ).json()
+    primero = alta_sensor(client, auth_headers, parcela_id)
     client.patch(
         f"/parcelas/{parcela_id}/sensores/{primero['id']}",
         json={"activo": False},
         headers=auth_headers,
     )
 
-    segundo = client.post(
-        f"/parcelas/{parcela_id}/sensores/", json={"etiqueta": "B"}, headers=auth_headers
-    ).json()
+    segundo = alta_sensor(client, auth_headers, parcela_id)
     assert segundo["numero"] == 2, "el numero del sensor desactivado se ha reutilizado"
-
-
-def test_el_cliente_no_puede_fijar_el_numero(client, auth_headers, parcela_id):
-    """SensorCreate no declara `numero`: enviarlo se ignora."""
-    resp = client.post(
-        f"/parcelas/{parcela_id}/sensores/",
-        json={"etiqueta": "Listillo", "numero": 99},
-        headers=auth_headers,
-    )
-    assert resp.status_code == 201
-    assert resp.json()["numero"] == 1
 
 
 def test_la_restriccion_impide_dos_sensores_con_el_mismo_numero(db_session):
