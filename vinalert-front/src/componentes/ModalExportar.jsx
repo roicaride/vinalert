@@ -484,7 +484,7 @@ export default function ModalExportar({ parcela, abierto, alCerrar }) {
             ))}
           </div>
           {formato === 'csv' && opcion === 'todo' && (
-            <p className="mt-3 text-xs text-oso-4">
+            <p className="mt-3 text-xs text-oso-3">
               En CSV no caben pestañas: se descarga el resumen diario.
             </p>
           )}

@@ -34,7 +34,7 @@ function MedidaSd({ media, sd }) {
   return (
     <span className="font-mono text-xs tabular-nums text-oso">
       {fmt(media)}
-      <span className="text-oso-4">{` ± ${fmt(sd)}`}</span>
+      <span className="text-oso-3">{` ± ${fmt(sd)}`}</span>
     </span>
   );
 }
@@ -173,7 +173,7 @@ export default function Foliar() {
                       <MedidaSd media={l.nbi_medio} sd={l.nbi_sd} />
                     </td>
                     <td className="px-4 py-2.5 font-mono text-xs text-oso-2">{fmt(l.n_mediciones)}</td>
-                    <td className="px-4 py-2.5 font-mono text-xs text-oso-4">
+                    <td className="px-4 py-2.5 font-mono text-xs text-oso-3">
                       {l.archivo_origen ?? '—'}
                     </td>
                   </tr>

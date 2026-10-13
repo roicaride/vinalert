@@ -271,7 +271,7 @@ export default function Portada() {
                       {persona.nombre ?? t.equipo.nombre}
                     </h3>
                     <p className="rotulo mt-1.5">{persona.cargo ?? t.equipo.cargo}</p>
-                    <p className={`mt-3 text-sm leading-relaxed ${hueco ? 'text-oso-4' : 'text-oso-2'}`}>
+                    <p className={`mt-3 text-sm leading-relaxed ${hueco ? 'text-oso-3' : 'text-oso-2'}`}>
                       {persona.linea ?? t.equipo.linea}
                     </p>
                   </div>
@@ -307,7 +307,7 @@ export default function Portada() {
       <footer className={`flex flex-wrap items-center justify-between gap-4 border-t border-linea ${ANCHO} py-6`}>
         <div className="flex items-center gap-3">
           <Marca alto={14} className="text-oso-4" />
-          <span className="rotulo text-oso-4">
+          <span className="rotulo text-oso-3">
             © {new Date().getFullYear()} Viñalert · {t.pie.derechos}
           </span>
         </div>

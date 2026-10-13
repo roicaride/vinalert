@@ -270,7 +270,7 @@ export default function Cuentas() {
                     {c.creado_en ? (
                       <>
                         {fechaCorta(c.creado_en)}
-                        <span className="text-oso-4">{` · ${partesFecha(c.creado_en).hora}`}</span>
+                        <span className="text-oso-3">{` · ${partesFecha(c.creado_en).hora}`}</span>
                       </>
                     ) : (
                       <span title="Cuenta anterior a que se guardase la fecha de alta">—</span>
@@ -278,7 +278,7 @@ export default function Cuentas() {
                   </td>
                   <td
                     className={`px-4 py-2.5 text-right font-mono text-xs tabular-nums ${
-                      c.n_parcelas ? 'text-oso' : 'text-oso-4'
+                      c.n_parcelas ? 'text-oso' : 'text-oso-3'
                     }`}
                   >
                     {c.n_parcelas}

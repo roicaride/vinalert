@@ -36,7 +36,7 @@ export default function SelectorSensores({ sensores, seleccion }) {
           return (
             <button key={s.id} type="button" onClick={() => alternar(s.id)} aria-pressed={on}
               aria-label={`Sensor ${s.numero}`}
-              className={`${BOTON} flex items-center gap-2 ${on ? 'bg-lousa text-oso' : 'text-oso-4 hover:text-oso-2'}`}>
+              className={`${BOTON} flex items-center gap-2 ${on ? 'bg-lousa text-oso' : 'text-oso-3 hover:text-oso-2'}`}>
               <Muestra sensor={s} />
               {`S${s.numero}`}
             </button>

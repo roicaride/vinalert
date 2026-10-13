@@ -283,7 +283,7 @@ export default function Sensores() {
                   <td className="px-4 py-2.5">
                     <span className="flex items-center gap-2">
                       <Testigo tono={s.activo ? 'brote' : 'neutro'} />
-                      <span className={s.activo ? 'text-brote' : 'text-oso-4'}>
+                      <span className={s.activo ? 'text-brote' : 'text-oso-3'}>
                         {s.activo ? 'Activo' : 'Inactivo'}
                       </span>
                     </span>

@@ -137,16 +137,16 @@ export default function AppLayout() {
       <footer className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-1 border-t border-linea px-4 py-2">
         <div className="flex items-center gap-2">
           <Marca alto={11} className="text-oso-4" />
-          <span className="rotulo text-oso-4">Viñalert</span>
+          <span className="rotulo text-oso-3">Viñalert</span>
         </div>
         {/* En móvil solo sobrevive la hora: parcela y rol ya están en la
             cabecera, y repetirlos aquí parte la barra en dos líneas. */}
         <div className="flex items-center gap-x-5">
-          <span className="rotulo hidden text-oso-4 sm:inline">Parcela {parcela.id}</span>
-          <span className="rotulo hidden text-oso-4 sm:inline">
+          <span className="rotulo hidden text-oso-3 sm:inline">Parcela {parcela.id}</span>
+          <span className="rotulo hidden text-oso-3 sm:inline">
             {esAdmin ? 'Administrador' : soloLectura ? 'Solo lectura' : 'Gestor'}
           </span>
-          <span className="rotulo text-oso-4">Hora local {hora}</span>
+          <span className="rotulo text-oso-3">Hora local {hora}</span>
         </div>
       </footer>
     </div>

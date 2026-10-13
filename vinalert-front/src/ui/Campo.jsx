@@ -14,7 +14,7 @@ import { useId } from 'react';
 
 export const claseControl =
   'w-full border border-linea bg-alza px-3 py-2 font-mono text-sm text-oso ' +
-  'placeholder:font-sans placeholder:text-oso-4 outline-none transition-colors ' +
+  'placeholder:font-sans placeholder:text-oso-3 outline-none transition-colors ' +
   'focus:border-brote disabled:opacity-50 disabled:cursor-not-allowed ' +
   '[color-scheme:dark]';
 

@@ -49,7 +49,7 @@ export function Cifra({ etiqueta, valor, unidad, nota, tinta = 'text-oso', class
         {unidad ? `${valor} ${unidad}` : valor}
       </p>
       <p className="rotulo mt-2.5 truncate">{etiqueta}</p>
-      {nota && <p className="mt-1 font-mono text-[11px] tabular-nums text-oso-4">{nota}</p>}
+      {nota && <p className="mt-1 font-mono text-[11px] tabular-nums text-oso-3">{nota}</p>}
     </div>
   );
 }

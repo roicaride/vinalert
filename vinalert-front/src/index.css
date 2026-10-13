@@ -30,10 +30,14 @@
   --color-brote: #8fc93a;
   --color-ambar: #e0913a;
 
-  /* --- Derivadas: OSO rebajado sobre LOUSA, para jerarquia de texto --- */
-  --color-oso-2: #9d9f9c; /* secundario: descripciones, unidades */
-  --color-oso-3: #787c7b; /* terciario: metadatos, marcas de tiempo */
-  --color-oso-4: #555b5c; /* apagado: placeholders, deshabilitado */
+  /* --- Derivadas: OSO rebajado sobre LOUSA, para jerarquia de texto ---
+     Calculadas para WCAG AA: todo texto informativo llega a 4,5:1 sobre LOUSA
+     y sobre ALZA, y cada nivel se separa del siguiente. OSO-4 no llega: es
+     solo para lo deshabilitado y lo decorativo (3:1). Lo comprueba
+     src/test/contraste.test.js; si retocas uno, mira que siga pasando. */
+  --color-oso-2: #b3b4b0; /* secundario: descripciones, unidades (7,0:1) */
+  --color-oso-3: #999b99; /* terciario: metadatos, marcas de tiempo, placeholders (5,2:1) */
+  --color-oso-4: #7b7f7e; /* apagado: deshabilitado y decorativo, nunca texto que haya que leer (3,6:1) */
 
   /* --- Derivadas: la rejilla --- */
   --color-linea: #3b4144; /* la linea de 1px, por defecto */
@@ -41,7 +45,7 @@
   --color-alza: #2a3337; /* superficie que sube: input, celda activa */
 
   /* --- Derivada: la unica tinta que no es de marca --- */
-  --color-sangre: #e2705a;
+  --color-sangre: #e57e6a; /* aclarada para llegar a 4,5:1 sobre ALZA, donde van los avisos */
 
   /* --- Tipografia: dos voces --- */
   --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
@@ -173,8 +177,9 @@
   }
   .leaflet-control-attribution {
     background: rgba(34, 42, 46, 0.85) !important;
-    color: var(--color-oso-4) !important;
-    font-size: 9px !important;
+    /* Es la cita que exige la licencia del IGN: tiene que poder leerse. */
+    color: var(--color-oso-3) !important;
+    font-size: 10px !important;
   }
   .leaflet-control-attribution a {
     color: var(--color-oso-3) !important;

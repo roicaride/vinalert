@@ -164,7 +164,7 @@ export default function Miembros() {
                 <td className="px-4 py-2.5 text-sm text-oso">
                   {m.nombre || <span className="text-oso-4">—</span>}
                   {m.usuario_id === usuario.id && (
-                    <span className="rotulo ml-2 text-oso-4">Tú</span>
+                    <span className="rotulo ml-2 text-oso-3">Tú</span>
                   )}
                   {m.pendiente && (
                     <Marbete tono="ambar" className="ml-2">Pendiente</Marbete>
@@ -249,7 +249,7 @@ export default function Miembros() {
           <Boton tono="solido" type="submit" disabled={aniadiendo} className="mb-px py-2.5">
             {aniadiendo ? 'Añadiendo…' : 'Añadir'}
           </Boton>
-          <p className="mb-1 max-w-xs text-xs text-oso-4">
+          <p className="mb-1 max-w-xs text-xs text-oso-3">
             Si aún no tiene cuenta, le llegará una invitación por email para crearla.
           </p>
         </form>

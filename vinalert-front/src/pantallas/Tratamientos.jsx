@@ -173,7 +173,7 @@ export default function Tratamientos() {
           </Enlace>
         )}
         {listaVisible.length < listaFiltrada.length && (
-          <span className="rotulo pb-2 text-oso-4">
+          <span className="rotulo pb-2 text-oso-3">
             {`Viendo ${listaVisible.length} de ${listaFiltrada.length}`}
           </span>
         )}

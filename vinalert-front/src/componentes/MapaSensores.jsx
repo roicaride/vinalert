@@ -183,7 +183,7 @@ export default function MapaSensores({ parcela, sensores = [] }) {
             <span aria-hidden="true" className="size-2.5 bg-oso" /> Centro de la parcela
           </span>
         </div>
-        <p className="text-xs text-oso-4">Pulsa un nodo para ver su ficha.</p>
+        <p className="text-xs text-oso-3">Pulsa un nodo para ver su ficha.</p>
       </div>
     </section>
   );

@@ -54,7 +54,7 @@ function Grupo({ titulo, nota, children }) {
       <legend className="sr-only">{titulo}</legend>
       <div className="mb-5 flex flex-wrap items-baseline gap-x-4 gap-y-1">
         <p className="rotulo" aria-hidden="true">{titulo}</p>
-        {nota && <p className="text-xs text-oso-4">{nota}</p>}
+        {nota && <p className="text-xs text-oso-3">{nota}</p>}
       </div>
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{children}</div>
     </fieldset>

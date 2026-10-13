@@ -83,7 +83,7 @@ function GrupoClima({ titulo, nota, filas }) {
   return (
     <div className="bg-lousa px-4 py-4">
       <p className="rotulo">{titulo}</p>
-      {nota && <p className="mt-1 text-xs text-oso-4">{nota}</p>}
+      {nota && <p className="mt-1 text-xs text-oso-3">{nota}</p>}
       <dl className="mt-3 divide-y divide-linea">
         {filas.map(([nombre, valor]) => (
           <div key={nombre} className="flex items-baseline justify-between gap-4 py-2">
