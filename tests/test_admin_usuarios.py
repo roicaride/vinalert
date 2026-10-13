@@ -5,7 +5,7 @@ El listado de /admin/usuarios es la forma de ver quien se ha dado de alta sin
 entrar en la base de datos a mano. Es solo para el superadmin, igual que los
 dispositivos ESP32, y nunca devuelve la huella de la contrasena.
 """
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from app.models import Parcela, ParcelaUsuario, Usuario
 from tests.ayudas import hacer_superadmin, registrar

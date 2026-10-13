@@ -2,7 +2,7 @@ from datetime import date, datetime
 from typing import Annotated, Literal, Optional
 from zoneinfo import ZoneInfo
 
-from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict, EmailStr, Field, field_validator
+from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict, EmailStr, Field
 
 _TZ_MADRID = ZoneInfo("Europe/Madrid")
 
