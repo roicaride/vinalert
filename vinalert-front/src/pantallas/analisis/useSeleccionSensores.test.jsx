@@ -29,12 +29,12 @@ test('por defecto estan todos encendidos y en modo Media', () => {
   render(<Banco />);
   expect(estado()).toBe('media:11,12,14');
   expect(screen.getByRole('button', { name: 'Media' })).toHaveAttribute('aria-pressed', 'true');
-  expect(screen.getByRole('button', { name: 'Sensor 2, 40 cm' })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('button', { name: 'Sensor 2' })).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('un atajo de profundidad deja solo esos sensores, y Todos los vuelve a encender', () => {
+test('apagar sensores y volver a Todos los enciende otra vez', () => {
   render(<Banco />);
-  pulsar('20 cm');
+  pulsar('Sensor 2');
   expect(estado()).toBe('media:11,14');
   pulsar('Todos');
   expect(estado()).toBe('media:11,12,14');
@@ -42,16 +42,16 @@ test('un atajo de profundidad deja solo esos sensores, y Todos los vuelve a ence
 
 test('no deja apagar el ultimo sensor', () => {
   render(<Banco />);
-  pulsar('Sensor 1, 20 cm');
-  pulsar('Sensor 2, 40 cm');
-  pulsar('Sensor 4, 20 cm');
+  pulsar('Sensor 1');
+  pulsar('Sensor 2');
+  pulsar('Sensor 4');
   expect(estado()).toBe('media:14');
 });
 
 test('Comparar cambia el modo y la seleccion se recuerda por parcela', () => {
   const { unmount } = render(<Banco />);
   pulsar('Comparar');
-  pulsar('Sensor 2, 40 cm');
+  pulsar('Sensor 2');
   expect(estado()).toBe('comparar:11,14');
   unmount();
 
@@ -65,8 +65,9 @@ test('una seleccion guardada con sensores que ya no existen vuelve a todos', () 
   expect(estado()).toBe('comparar:11,12,14');
 });
 
-test('solo hay atajos para las profundidades que existen', () => {
+test('los sensores no se diferencian por profundidad', () => {
   render(<Banco />);
-  expect(screen.getByRole('button', { name: '40 cm' })).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: '60 cm' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '20 cm' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '40 cm' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Sensor 1' }).textContent).toBe('S1');
 });

@@ -12,7 +12,7 @@ import {
 
 import { Leyenda, Marco, Pista } from './piezas';
 import { claveHumedad, claveTemperatura, cortarHuecos } from './series';
-import { EJE, GRID, SERIES, colorSensor, trazoProfundidad } from './tema';
+import { EJE, GRID, SERIES, colorSensor } from './tema';
 
 /**
  * Las graficas de suelo de Analisis, segun los sensores elegidos.
@@ -31,7 +31,7 @@ const MARGEN = { top: 5, right: 12, left: -12, bottom: 0 };
 const CURSOR = { stroke: '#565e60', strokeDasharray: '3 3' };
 const PUNTO_ACTIVO = { r: 5, strokeWidth: 2, stroke: '#222a2e' };
 
-const nombreSensor = (s) => `S${s.numero}${s.profundidad_cm != null ? ` · ${s.profundidad_cm} cm` : ''}`;
+const nombreSensor = (s) => `S${s.numero}`;
 
 export default function GraficaSuelo({ es48h, modo, sensores, diario, horas, formatearEjeX, formatearTooltip, puntos }) {
   const pista = <Pista formatearEtiqueta={formatearTooltip} />;
@@ -98,7 +98,6 @@ export default function GraficaSuelo({ es48h, modo, sensores, diario, horas, for
                   dataKey={es48h ? g.campo48 : g.clave(s.id)}
                   name={nombreSensor(s)}
                   stroke={colorSensor(s.numero)}
-                  strokeDasharray={trazoProfundidad(s.profundidad_cm)}
                   strokeWidth={2}
                   dot={puntos}
                   activeDot={PUNTO_ACTIVO}

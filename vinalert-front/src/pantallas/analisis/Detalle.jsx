@@ -12,7 +12,7 @@ import {
 
 import { Leyenda, Marco } from './piezas';
 import { claveHumedad } from './series';
-import { EJE, GRID, SERIES, colorSensor, trazoProfundidad } from './tema';
+import { EJE, GRID, SERIES, colorSensor } from './tema';
 
 /**
  * La vista Detalle de Analisis: el clima que Open-Meteo da cada dia y que el
@@ -112,8 +112,7 @@ export default function Detalle({ datos, formatearEjeX, pista, puntos, modo = 'm
             {modo === 'comparar' ? (
               sensores.map((s) => (
                 <Line key={s.id} type="monotone" dataKey={claveHumedad(s.id)}
-                  name={`S${s.numero}${s.profundidad_cm != null ? ` · ${s.profundidad_cm} cm` : ''} (%)`}
-                  stroke={colorSensor(s.numero)} strokeDasharray={trazoProfundidad(s.profundidad_cm)}
+                  name={`S${s.numero} (%)`} stroke={colorSensor(s.numero)}
                   strokeWidth={2} dot={puntos} activeDot={PUNTO_ACTIVO} />
               ))
             ) : (

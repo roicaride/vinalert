@@ -111,6 +111,27 @@ test('crear un tratamiento con fecha pasada lo inserta en su sitio, no al princi
   expect(filas[1]).toHaveTextContent('Fungicida');
 });
 
+test('solo se ven los ultimos, y el desplegable enseña mas', async () => {
+  // El backend los devuelve de mas nuevo a mas viejo: los ultimos son los
+  // primeros de la lista.
+  const muchos = Array.from({ length: 12 }, (_, i) => ({
+    ...TRATAMIENTO, id: i + 1, producto: `Producto ${i + 1}`,
+  }));
+  listarTratamientos.mockResolvedValue(muchos);
+  montar(PARCELA_GESTOR);
+
+  const tabla = await screen.findByRole('table');
+  expect(within(tabla).getAllByRole('row')).toHaveLength(11); // cabecera + 10
+  expect(within(tabla).getByText('Producto 1')).toBeInTheDocument();
+  expect(within(tabla).queryByText('Producto 11')).not.toBeInTheDocument();
+
+  await userEvent.selectOptions(screen.getByLabelText('Tratamientos a mostrar'), '25');
+
+  expect(within(tabla).getAllByRole('row')).toHaveLength(13); // cabecera + 12
+  expect(within(tabla).getByText('Producto 11')).toBeInTheDocument();
+  expect(listarTratamientos).toHaveBeenCalledTimes(1);
+});
+
 test('borrar pide confirmacion y llama al backend', async () => {
   listarTratamientos.mockResolvedValue([TRATAMIENTO]);
   borrarTratamiento.mockResolvedValue(undefined);

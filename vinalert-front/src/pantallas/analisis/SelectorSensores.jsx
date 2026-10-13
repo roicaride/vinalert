@@ -1,8 +1,8 @@
-import { colorSensor, trazoProfundidad } from './tema';
+import { colorSensor } from './tema';
 
 /**
- * La banda del selector de sensores. Cada boton lleva una muestra de su color
- * y de su trazo: es la leyenda de las graficas en modo Comparar.
+ * La banda del selector de sensores. Cada boton lleva una muestra de su
+ * color: es la leyenda de las graficas en modo Comparar.
  */
 
 const BOTON =
@@ -12,19 +12,14 @@ const encendido = (si) => (si ? 'bg-oso text-lousa' : 'text-oso-3 hover:bg-lousa
 function Muestra({ sensor }) {
   return (
     <svg aria-hidden="true" width="18" height="6" className="shrink-0">
-      <line x1="0" y1="3" x2="18" y2="3" stroke={colorSensor(sensor.numero)} strokeWidth="2"
-        strokeDasharray={trazoProfundidad(sensor.profundidad_cm)} />
+      <line x1="0" y1="3" x2="18" y2="3" stroke={colorSensor(sensor.numero)} strokeWidth="2" />
     </svg>
   );
 }
 
 export default function SelectorSensores({ sensores, seleccion }) {
-  const { ids, modo, profundidades, alternar, elegirProfundidad, elegirTodos, cambiarModo } = seleccion;
+  const { ids, modo, alternar, elegirTodos, cambiarModo } = seleccion;
   const todosEncendidos = ids.length === sensores.length;
-  const soloProfundidad = (cm) => {
-    const deEsa = sensores.filter((s) => s.profundidad_cm === cm).map((s) => s.id);
-    return deEsa.length === ids.length && deEsa.every((id) => ids.includes(id));
-  };
 
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-linea bg-alza px-6 py-3">
@@ -33,23 +28,17 @@ export default function SelectorSensores({ sensores, seleccion }) {
         <button type="button" onClick={elegirTodos} aria-pressed={todosEncendidos} className={`${BOTON} ${encendido(todosEncendidos)}`}>
           Todos
         </button>
-        {profundidades.map((cm) => (
-          <button key={cm} type="button" onClick={() => elegirProfundidad(cm)} aria-pressed={soloProfundidad(cm)}
-            className={`${BOTON} ${encendido(soloProfundidad(cm))}`}>
-            {`${cm} cm`}
-          </button>
-        ))}
       </div>
 
       <div className="flex flex-wrap border border-linea">
         {sensores.map((s) => {
           const on = ids.includes(s.id);
-          const nombre = s.profundidad_cm != null ? `Sensor ${s.numero}, ${s.profundidad_cm} cm` : `Sensor ${s.numero}`;
           return (
-            <button key={s.id} type="button" onClick={() => alternar(s.id)} aria-pressed={on} aria-label={nombre}
+            <button key={s.id} type="button" onClick={() => alternar(s.id)} aria-pressed={on}
+              aria-label={`Sensor ${s.numero}`}
               className={`${BOTON} flex items-center gap-2 ${on ? 'bg-lousa text-oso' : 'text-oso-4 hover:text-oso-2'}`}>
               <Muestra sensor={s} />
-              {`S${s.numero}${s.profundidad_cm != null ? ` · ${s.profundidad_cm}` : ''}`}
+              {`S${s.numero}`}
             </button>
           );
         })}

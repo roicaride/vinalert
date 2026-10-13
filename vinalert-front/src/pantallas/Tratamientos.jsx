@@ -13,6 +13,12 @@ import { Encabezado } from '../ui/Panel';
 const TIPOS_HABITUALES = ['Fungicida', 'Herbicida', 'Insecticida', 'Abono foliar'];
 const OTRO = 'Otro';
 
+// Igual que las ultimas lecturas de Estado: la tabla ensena solo los ultimos
+// y quien quiera mas los pide. El backend ya los devuelve de mas nuevo a mas
+// viejo y la lista entera esta en memoria, asi que recortar no cuesta otra
+// peticion.
+const OPCIONES_REGISTROS = [10, 25, 50, 100];
+
 // Las opciones se derivan SIEMPRE de la lista completa, nunca de una vista
 // filtrada -- de lo contrario, filtrar por un tipo dejaria el formulario de
 // alta sin ver los demas tipos ya usados.
@@ -40,6 +46,7 @@ export default function Tratamientos() {
   const [mostrarModalExportar, setMostrarModalExportar] = useState(false);
   const [error, setError] = useState(null);
   const [filtro, setFiltro] = useState('');
+  const [cuantos, setCuantos] = useState(OPCIONES_REGISTROS[0]);
   const [borrandoId, setBorrandoId] = useState(null);
   const [form, setForm] = useState(formVacio);
   const [tipoPersonalizado, setTipoPersonalizado] = useState('');
@@ -56,6 +63,7 @@ export default function Tratamientos() {
 
   const opcionesTipo = useMemo(() => tiposDisponibles(tratamientos ?? []), [tratamientos]);
   const listaFiltrada = filtro ? (tratamientos ?? []).filter((t) => t.tipo === filtro) : tratamientos;
+  const listaVisible = (listaFiltrada ?? []).slice(0, cuantos);
 
   const cambiar = (campo) => (e) => setForm((f) => ({ ...f, [campo]: e.target.value }));
 
@@ -143,10 +151,31 @@ export default function Tratamientos() {
             ))}
           </select>
         </div>
+        <div>
+          <label htmlFor="cuantos-tratamientos" className="rotulo block">
+            Mostrar
+          </label>
+          <select
+            id="cuantos-tratamientos"
+            aria-label="Tratamientos a mostrar"
+            value={cuantos}
+            onChange={(e) => setCuantos(Number(e.target.value))}
+            className={`${claseControl} mt-1.5 w-24 py-1.5 text-xs`}
+          >
+            {OPCIONES_REGISTROS.map((n) => (
+              <option key={n} value={n}>{n}</option>
+            ))}
+          </select>
+        </div>
         {filtro && (
           <Enlace onClick={() => setFiltro('')} className="pb-2">
             Quitar filtro
           </Enlace>
+        )}
+        {listaVisible.length < listaFiltrada.length && (
+          <span className="rotulo pb-2 text-oso-4">
+            {`Viendo ${listaVisible.length} de ${listaFiltrada.length}`}
+          </span>
         )}
       </div>
 
@@ -183,7 +212,7 @@ export default function Tratamientos() {
                 </td>
               </tr>
             )}
-            {listaFiltrada.map((t) => {
+            {listaVisible.map((t) => {
               const sinClima = t.clima_fuente === 'no_disponible';
               return (
                 <tr key={t.id} className="font-mono text-xs transition-colors hover:bg-alza">

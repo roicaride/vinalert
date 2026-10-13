@@ -225,15 +225,15 @@ test('por defecto la humedad y la temperatura del periodo son la media justa de 
   expect(await screen.findByText('26.0 %')).toBeInTheDocument();
   expect(screen.getByText('17.5 °C')).toBeInTheDocument();
   // El sensor dado de baja no aparece en el selector.
-  expect(screen.getByRole('button', { name: 'Sensor 1, 20 cm' })).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Sensor 3, 60 cm' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Sensor 1' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Sensor 3' })).not.toBeInTheDocument();
 });
 
 test('las cifras siguen a los sensores elegidos', async () => {
   montarDiario();
   await screen.findByText('26.0 %');
 
-  await userEvent.click(screen.getByRole('button', { name: '20 cm' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Sensor 2' }));
 
   expect(await screen.findByText('31.0 %')).toBeInTheDocument();
   expect(screen.getByText('19.0 °C')).toBeInTheDocument();

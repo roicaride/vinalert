@@ -31,10 +31,6 @@ export function useSeleccionSensores(parcelaId, sensores) {
   // Lo tocado en esta visita, por parcela. Si no se ha tocado, manda lo guardado.
   const [tocado, setTocado] = useState({});
   const todos = useMemo(() => sensores.map((s) => s.id), [sensores]);
-  const profundidades = useMemo(
-    () => [...new Set(sensores.map((s) => s.profundidad_cm).filter((p) => p != null))].sort((a, b) => a - b),
-    [sensores],
-  );
 
   const base = tocado[parcelaId] ?? leer(parcelaId);
   const valida = base && base.ids.length > 0 && base.ids.every((id) => todos.includes(id));
@@ -61,12 +57,10 @@ export function useSeleccionSensores(parcelaId, sensores) {
   return {
     ids,
     modo,
-    profundidades,
     alternar: (id) => {
       const siguiente = ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id];
       if (siguiente.length) fijar({ ids: siguiente, modo });
     },
-    elegirProfundidad: (cm) => fijar({ ids: sensores.filter((s) => s.profundidad_cm === cm).map((s) => s.id), modo }),
     elegirTodos: () => fijar({ ids: todos, modo }),
     cambiarModo: (nuevo) => fijar({ ids, modo: nuevo }),
   };

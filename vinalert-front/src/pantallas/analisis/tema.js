@@ -62,18 +62,11 @@ export const EJE = {
 
 /**
  * Cada sensor tiene SU color, el mismo en todas las graficas, por su numero
- * (S1…S6, y vuelta a empezar). La profundidad va en el trazo: codificacion
- * secundaria, para que dos colores cercanos se sigan distinguiendo.
+ * (S1…S6, y vuelta a empezar). Es lo unico que los distingue: la profundidad
+ * no se representa.
  */
 export const COLORES_SENSOR = ['#4B98E3', '#C7832D', '#C1558A', '#69A81C', '#A979DD', '#27A6A3'];
 
 export function colorSensor(numero) {
   return COLORES_SENSOR[(Math.max(1, numero) - 1) % COLORES_SENSOR.length];
-}
-
-/** 20 cm continuo, 40 cm discontinuo, 60 cm punteado; el resto, continuo. */
-export function trazoProfundidad(cm) {
-  if (cm === 40) return '6 3';
-  if (cm === 60) return '2 3';
-  return undefined;
 }
