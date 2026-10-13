@@ -122,7 +122,7 @@ Migración `migracion_2026_10_13_cuentas.sql` (idempotente):
 | usuario_id | int FK usuarios, NOT NULL, ON DELETE CASCADE | |
 | tipo | varchar NOT NULL | `invitacion` \| `recuperacion` |
 | hash_token | varchar(64) NOT NULL UNIQUE | SHA-256 hex |
-| creado_en | timestamp NOT NULL | hora de Madrid sin zona, como el resto |
+| creado_en | timestamp NOT NULL | UTC sin zona (ver nota) |
 | caduca_en | timestamp NOT NULL | invitación +7 días, recuperación +1 hora |
 | usado_en | timestamp NULL | |
 | creado_por_id | int FK usuarios NULL | quién invitó |
@@ -140,7 +140,13 @@ Migración `migracion_2026_10_13_cuentas.sql` (idempotente):
 | ip | varchar NOT NULL | |
 | resultado | varchar NOT NULL | `exito` \| `fallo` \| `bloqueado` |
 
-Índices en `(email, tipo, momento)` y `(ip, tipo, momento)`. Un job diario del
+Índices en `(email, tipo, momento)` y `(ip, tipo, momento)`.
+
+**Nota sobre la hora.** Estas dos tablas guardan UTC sin zona, a diferencia del
+resto de la BD (hora de Madrid). Con hora local, la noche del cambio de hora de
+octubre la franja 02:00–03:00 se repite y "los últimos 15 minutos" contarían
+durante una hora fallos que ya han salido de la ventana. Son tablas internas:
+nadie las lee en hora local. Un job diario del
 scheduler borra intentos de más de 90 días y tokens caducados hace más de 30.
 
 ## Límites
