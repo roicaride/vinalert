@@ -1,299 +1,86 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
-import { invitarCliente, listarUsuarios } from '../api/admin';
-import MensajeError from '../errores/MensajeError';
 import CabeceraCuenta from '../layout/CabeceraCuenta';
-import Boton from '../ui/Boton';
-import { claseControl } from '../ui/Campo';
-import { Aviso, Cargando, Marbete } from '../ui/Estados';
-import { Cifra, Encabezado, Rejilla } from '../ui/Panel';
-import { descargarCsv, exportarExcelMultilibro } from '../utils/exportar';
+import { useSesion } from '../sesion/SesionContext';
+import { Aviso } from '../ui/Estados';
+import { Encabezado } from '../ui/Panel';
+import Accesos from './admin/Accesos';
+import ConfiguracionLegal from './admin/ConfiguracionLegal';
+import Cuentas from './admin/Cuentas';
+import EstadoSistema from './admin/EstadoSistema';
 
 /**
- * Administracion: todas las cuentas de Viñalert, para quien administra la
- * plataforma. Es la forma de ver quien se ha registrado —y sacarlo a Excel—
- * sin entrar en la base de datos a mano.
+ * Administracion: todo lo que el superadmin gestiona sin entrar al servidor
+ * ni a la base de datos. La pestaña va en la URL (?seccion=) para poder
+ * enlazarla y para que recargar no te devuelva a la primera.
  *
- * El permiso lo decide el backend (GET /admin/usuarios da 403 a cualquiera
- * que no sea el superadmin): esta pantalla solo traduce ese 403 a una frase.
+ * El permiso lo decide el backend (todo /admin/* da 403 a quien no es
+ * superadmin); aqui solo se evita pintar pestañas que no le van a cargar.
  */
-
-const CABECERAS = ['Nombre', 'Email', 'Teléfono', 'Rol', 'Fecha de alta', 'Parcelas'];
-
-// La fecha llega como "2026-09-18T10:15:00", hora local sin zona. Se trocea
-// el texto en vez de pasar por Date: asi no hay conversion de zona horaria
-// que la mueva de dia segun donde este el navegador.
-function partesFecha(iso) {
-  const [fecha, hora = ''] = iso.split('T');
-  const [a, m, d] = fecha.split('-');
-  return { a, m, d, hora: hora.slice(0, 5) };
-}
-
-function fechaCorta(iso) {
-  const { a, m, d } = partesFecha(iso);
-  return `${Number(d)}/${Number(m)}/${a}`;
-}
-
-function fechaExportacion(iso) {
-  if (!iso) return '';
-  const { a, m, d, hora } = partesFecha(iso);
-  return `${d}/${m}/${a} ${hora}`;
-}
-
-/** Sin mayusculas ni tildes: «XOAN» encuentra a «Xoán». */
-function normalizar(texto) {
-  return (texto ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-}
-
-function hoyIso() {
-  const h = new Date();
-  const dos = (n) => String(n).padStart(2, '0');
-  return `${h.getFullYear()}-${dos(h.getMonth() + 1)}-${dos(h.getDate())}`;
-}
+const SECCIONES = [
+  {
+    clave: 'cuentas',
+    nombre: 'Cuentas',
+    descripcion:
+      'Todas las cuentas de Viñalert: invitar, desactivar, eliminar y dar permisos. Las contraseñas no se pueden leer, ni desde aquí ni desde la base de datos.',
+    Pantalla: Cuentas,
+  },
+  {
+    clave: 'estado',
+    nombre: 'Estado',
+    descripcion: 'Si los trabajos periódicos van bien, si el correo está configurado y qué dispositivos se han callado.',
+    Pantalla: EstadoSistema,
+  },
+  {
+    clave: 'accesos',
+    nombre: 'Accesos',
+    descripcion: 'Intentos de inicio de sesión y de recuperación de contraseña de los últimos 90 días.',
+    Pantalla: Accesos,
+  },
+  {
+    clave: 'configuracion',
+    nombre: 'Configuración',
+    descripcion: 'Los datos del titular y del encargado que publican el aviso legal y la política de privacidad.',
+    Pantalla: ConfiguracionLegal,
+  },
+];
 
 export default function Administracion() {
-  const [cuentas, setCuentas] = useState(null);
-  const [error, setError] = useState(null);
-  const [busqueda, setBusqueda] = useState('');
-  const [emailInvitado, setEmailInvitado] = useState('');
-  const [nombreInvitado, setNombreInvitado] = useState('');
-  const [invitando, setInvitando] = useState(false);
-  const [avisoInvitacion, setAvisoInvitacion] = useState(null);
-  const [errorInvitacion, setErrorInvitacion] = useState(null);
-
-  const invitar = async (e) => {
-    e.preventDefault();
-    setAvisoInvitacion(null);
-    setErrorInvitacion(null);
-    setInvitando(true);
-    try {
-      const nueva = await invitarCliente(emailInvitado, nombreInvitado);
-      setCuentas((prev) => [nueva, ...(prev ?? [])]);
-      setAvisoInvitacion(`Invitación enviada a ${nueva.email}.`);
-      setEmailInvitado('');
-      setNombreInvitado('');
-    } catch (err) {
-      setErrorInvitacion(err);
-    } finally {
-      setInvitando(false);
-    }
-  };
-
-  useEffect(() => {
-    let vigente = true;
-    listarUsuarios()
-      .then((c) => { if (vigente) setCuentas(c); })
-      .catch((e) => { if (vigente) setError(e); });
-    return () => { vigente = false; };
-  }, []);
-
-  const visibles = useMemo(() => {
-    if (!cuentas) return [];
-    const q = normalizar(busqueda.trim());
-    if (!q) return cuentas;
-    return cuentas.filter((c) => normalizar(c.nombre).includes(q) || normalizar(c.email).includes(q));
-  }, [cuentas, busqueda]);
-
-  const resumen = useMemo(() => {
-    const lista = cuentas ?? [];
-    const hace30 = new Date();
-    hace30.setDate(hace30.getDate() - 30);
-    const limite = hace30.toISOString().slice(0, 10);
-    return {
-      total: lista.length,
-      recientes: lista.filter((c) => c.creado_en && c.creado_en.slice(0, 10) >= limite).length,
-      sinParcela: lista.filter((c) => c.n_parcelas === 0).length,
-    };
-  }, [cuentas]);
-
-  const filasExportacion = () =>
-    visibles.map((c) => [c.nombre, c.email, c.telefono ?? '', c.rol, fechaExportacion(c.creado_en), c.n_parcelas]);
-
-  const exportarExcel = () =>
-    exportarExcelMultilibro(`vinalert_cuentas_${hoyIso()}`, [
-      { nombre: 'Cuentas', cabeceras: CABECERAS, filas: filasExportacion() },
-    ]);
-
-  const exportarCsv = () => descargarCsv(`vinalert_cuentas_${hoyIso()}`, CABECERAS, filasExportacion());
-
-  let cuerpo;
-  if (error?.response?.status === 403) {
-    cuerpo = (
-      <div className="p-6">
-        <Aviso tono="ambar">
-          Esta sección es solo para el administrador de Viñalert.
-        </Aviso>
-      </div>
-    );
-  } else if (error) {
-    cuerpo = (
-      <div className="p-6">
-        <MensajeError error={error} textoNoEncontrado="No se pudo cargar el listado de cuentas." />
-      </div>
-    );
-  } else if (cuentas === null) {
-    cuerpo = <Cargando texto="Cargando cuentas" />;
-  } else {
-    cuerpo = (
-      <>
-        <section className="border-b border-linea">
-          <Rejilla cols="grid-cols-1 sm:grid-cols-3">
-            <div className="bg-lousa px-6 py-5">
-              <Cifra valor={resumen.total} etiqueta="Cuentas" />
-            </div>
-            <div className="bg-lousa px-6 py-5">
-              <Cifra valor={resumen.recientes} etiqueta="Altas en los últimos 30 días" tinta="text-brote" />
-            </div>
-            <div className="bg-lousa px-6 py-5">
-              <Cifra valor={resumen.sinParcela} etiqueta="Sin ninguna parcela" />
-            </div>
-          </Rejilla>
-        </section>
-
-        {/* Alta de clientes: solo por invitacion. El cliente entra sin
-            parcelas, crea las suyas e invita a su gente. */}
-        <form className="flex flex-wrap items-end gap-4 border-b border-linea px-6 py-4" onSubmit={invitar}>
-          <div className="w-full max-w-xs">
-            <label htmlFor="email-cliente" className="rotulo block">
-              Email del cliente
-            </label>
-            <input
-              id="email-cliente"
-              type="email"
-              required
-              value={emailInvitado}
-              onChange={(e) => setEmailInvitado(e.target.value)}
-              placeholder="bodega@ejemplo.es"
-              className={`${claseControl} mt-1.5`}
-            />
-          </div>
-          <div className="w-full max-w-xs">
-            <label htmlFor="nombre-cliente" className="rotulo block">
-              Nombre del cliente
-            </label>
-            <input
-              id="nombre-cliente"
-              type="text"
-              required
-              maxLength={120}
-              value={nombreInvitado}
-              onChange={(e) => setNombreInvitado(e.target.value)}
-              placeholder="Bodega o persona"
-              className={`${claseControl} mt-1.5`}
-            />
-          </div>
-          <Boton tono="solido" type="submit" disabled={invitando} className="mb-px py-2.5">
-            {invitando ? 'Invitando…' : 'Invitar cliente'}
-          </Boton>
-          {avisoInvitacion && <Aviso tono="brote" role="status" className="w-full">{avisoInvitacion}</Aviso>}
-          {errorInvitacion && (
-            <div className="w-full">
-              <MensajeError error={errorInvitacion} />
-            </div>
-          )}
-        </form>
-
-        <div className="flex flex-wrap items-end gap-4 border-b border-linea bg-alza px-6 py-3">
-          {/* El ancho va en el envoltorio: en el input chocaria con el w-full
-              de claseControl y ganaria el que la hoja ponga despues. */}
-          <div className="w-full max-w-sm">
-            <label htmlFor="buscar-cuentas" className="rotulo block">
-              Buscar
-            </label>
-            <input
-              id="buscar-cuentas"
-              type="search"
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Nombre o email"
-              className={`${claseControl} mt-1.5 py-1.5 text-xs`}
-            />
-          </div>
-          {busqueda && (
-            <p className="pb-2 font-mono text-xs text-oso-3">
-              {visibles.length} de {cuentas.length}
-            </p>
-          )}
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left">
-            <thead>
-              <tr className="border-b border-linea bg-alza">
-                <th className="rotulo px-4 py-3 font-medium">Nombre</th>
-                <th className="rotulo px-4 py-3 font-medium">Email</th>
-                <th className="rotulo px-4 py-3 font-medium">Rol</th>
-                <th className="rotulo px-4 py-3 font-medium">Alta</th>
-                <th className="rotulo px-4 py-3 text-right font-medium">Parcelas</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-linea">
-              {visibles.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center">
-                    <span className="rotulo">
-                      {busqueda ? `Ninguna cuenta coincide con «${busqueda}»` : 'Todavía no hay cuentas'}
-                    </span>
-                  </td>
-                </tr>
-              )}
-              {visibles.map((c) => (
-                <tr key={c.id} className="transition-colors hover:bg-alza">
-                  <td className="px-4 py-2.5 text-sm text-oso">
-                    {c.nombre || <span className="text-oso-4">—</span>}
-                    {c.pendiente && <Marbete tono="ambar" className="ml-2">Pendiente</Marbete>}
-                  </td>
-                  <td className="px-4 py-2.5 font-mono text-xs text-oso-2">{c.email}</td>
-                  <td className="px-4 py-2.5">
-                    <Marbete tono={c.rol === 'admin' ? 'ambar' : 'neutro'}>
-                      {c.rol === 'admin' ? 'Administrador' : 'Agricultor'}
-                    </Marbete>
-                  </td>
-                  <td className="px-4 py-2.5 font-mono text-xs whitespace-nowrap text-oso-3">
-                    {c.creado_en ? (
-                      <>
-                        {fechaCorta(c.creado_en)}
-                        <span className="text-oso-4">{` · ${partesFecha(c.creado_en).hora}`}</span>
-                      </>
-                    ) : (
-                      <span title="Cuenta anterior a que se guardase la fecha de alta">—</span>
-                    )}
-                  </td>
-                  <td
-                    className={`px-4 py-2.5 text-right font-mono text-xs tabular-nums ${
-                      c.n_parcelas ? 'text-oso' : 'text-oso-4'
-                    }`}
-                  >
-                    {c.n_parcelas}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </>
-    );
-  }
+  const { usuario } = useSesion();
+  const [params, setParams] = useSearchParams();
+  const actual = SECCIONES.find((s) => s.clave === params.get('seccion')) ?? SECCIONES[0];
+  const { Pantalla } = actual;
 
   return (
     <div className="flex min-h-screen flex-col bg-lousa text-oso">
       <CabeceraCuenta />
-      <Encabezado
-        titulo="Administración"
-        descripcion="Todas las cuentas registradas en Viñalert. Las contraseñas no se pueden leer —ni desde aquí ni desde la base de datos—, así que no aparecen ni en la tabla ni en la exportación."
-      >
-        {cuentas && (
-          <>
-            <Boton tono="sutil" onClick={exportarExcel} disabled={!visibles.length}>
-              Exportar Excel
-            </Boton>
-            <Boton tono="sutil" onClick={exportarCsv} disabled={!visibles.length}>
-              Exportar CSV
-            </Boton>
-          </>
-        )}
-      </Encabezado>
-      <main className="flex-1">{cuerpo}</main>
+      <Encabezado titulo="Administración" descripcion={actual.descripcion} />
+      {usuario && !usuario.es_superadmin ? (
+        <div className="p-6">
+          <Aviso tono="ambar">Esta sección es solo para el administrador de Viñalert.</Aviso>
+        </div>
+      ) : (
+        <>
+          <nav aria-label="Secciones de administración" className="flex overflow-x-auto border-b border-linea">
+            {SECCIONES.map((s) => (
+              <button
+                key={s.clave}
+                type="button"
+                aria-current={s.clave === actual.clave ? 'page' : undefined}
+                onClick={() => setParams(s.clave === 'cuentas' ? {} : { seccion: s.clave })}
+                className={`shrink-0 border-r border-linea px-5 py-3 font-mono text-[11px] font-medium tracking-[0.16em] uppercase transition-colors ${
+                  s.clave === actual.clave ? 'bg-alza text-brote' : 'text-oso-2 hover:bg-alza hover:text-oso'
+                }`}
+              >
+                {s.nombre}
+              </button>
+            ))}
+          </nav>
+          <main className="flex-1">
+            <Pantalla />
+          </main>
+        </>
+      )}
     </div>
   );
 }

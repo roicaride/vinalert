@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import { LLAVE_TOKEN } from '../api/cliente';
@@ -62,7 +62,8 @@ test('exportar a Excel descarga las cuentas que se estan viendo', async () => {
 
   fireEvent.click(screen.getByRole('button', { name: 'Exportar Excel' }));
 
-  expect(exportarExcelMultilibro).toHaveBeenCalledTimes(1);
+  // La libreria de Excel se carga al pulsar, no con la pantalla.
+  await waitFor(() => expect(exportarExcelMultilibro).toHaveBeenCalledTimes(1));
   const [nombre, [pestana]] = exportarExcelMultilibro.mock.calls[0];
   expect(nombre).toMatch(/^vinalert_cuentas_\d{4}-\d{2}-\d{2}$/);
   expect(pestana.cabeceras).toEqual(['Nombre', 'Email', 'Teléfono', 'Rol', 'Fecha de alta', 'Parcelas']);
@@ -76,6 +77,7 @@ test('exportar a CSV usa las mismas columnas', async () => {
 
   fireEvent.click(screen.getByRole('button', { name: 'Exportar CSV' }));
 
+  await waitFor(() => expect(descargarCsv).toHaveBeenCalled());
   const [, cabeceras, filas] = descargarCsv.mock.calls[0];
   expect(cabeceras[1]).toBe('Email');
   expect(filas).toHaveLength(3);

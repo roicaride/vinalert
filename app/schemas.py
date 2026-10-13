@@ -487,7 +487,7 @@ class DispositivoEstadoResp(BaseModel):
 
 
 class EstadoSistemaResp(BaseModel):
-    """Fechas de jobs en UTC; ultimo_uso de dispositivos y hora_servidor en hora de Madrid."""
+    """Fechas de jobs y ultimo_uso de dispositivos en UTC sin zona; hora_servidor en hora de Madrid."""
     hora_servidor: datetime
     correo_configurado: bool
     proveedor_clima: str

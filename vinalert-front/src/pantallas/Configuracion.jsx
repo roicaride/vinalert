@@ -16,6 +16,7 @@ import { useSesion } from '../sesion/SesionContext';
 import Boton, { Enlace } from '../ui/Boton';
 import Campo, { claseControl } from '../ui/Campo';
 import { Aviso, Marbete, Testigo } from '../ui/Estados';
+import { horaMadridDesdeUtc } from './admin/fechas';
 import { Encabezado } from '../ui/Panel';
 
 // Los campos editables de ParcelaUpdate (app/schemas.py).
@@ -417,7 +418,7 @@ export default function Configuracion() {
                           )}
                         </td>
                         <td className="px-4 py-3 font-mono text-xs text-oso-3">
-                          {d.ultimo_uso ? new Date(d.ultimo_uso).toLocaleString('es-ES') : 'Sin lecturas aún'}
+                          {d.ultimo_uso ? horaMadridDesdeUtc(d.ultimo_uso) : 'Sin lecturas aún'}
                         </td>
                         <td className="space-x-4 px-4 py-3 text-right whitespace-nowrap">
                           <Enlace onClick={() => handleToggleRevocar(d.id)}>
