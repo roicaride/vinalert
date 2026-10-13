@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 
 import { CuadroMarca, Marca } from '../../marca/Marca';
 import { SECCIONES } from '../../secciones';
+import PieLegal from '../legal/PieLegal';
 
 /**
  * La puerta, comun a todas las pantallas sin sesion: entrar, recuperar la
@@ -49,6 +50,7 @@ export default function MarcoAcceso({ rotulo, titulo, children }) {
           <p className="rotulo">{rotulo}</p>
           <h1 className="mt-3 font-mono text-xl font-medium tracking-[-0.01em] text-oso">{titulo}</h1>
           {children}
+          <PieLegal className="mt-10 border-t border-linea pt-5" />
         </div>
       </section>
     </div>

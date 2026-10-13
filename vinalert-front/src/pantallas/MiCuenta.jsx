@@ -10,6 +10,7 @@ import Campo from '../ui/Campo';
 import { Aviso } from '../ui/Estados';
 import { Encabezado, Panel } from '../ui/Panel';
 import { AYUDA_PASSWORD } from './acceso/acceso';
+import PieLegal from './legal/PieLegal';
 
 /**
  * Lo que una persona hace con su propia cuenta. Cambiar la contraseña cierra
@@ -139,6 +140,9 @@ export default function MiCuenta() {
           </div>
         </Panel>
       </div>
+      <footer className="mt-auto border-t border-linea px-6 py-5">
+        <PieLegal />
+      </footer>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { aceptarInvitacion, me, verInvitacion } from '../api/auth';
 import MensajeError from '../errores/MensajeError';
@@ -114,6 +114,12 @@ export default function Invitacion() {
               </Aviso>
             )}
             <MensajeError error={error} />
+            <p className="text-xs leading-relaxed text-oso-3">
+              Al activar tu cuenta aceptas las{' '}
+              <Link to="/condiciones" className="underline hover:text-oso">condiciones de uso</Link>. Tu nombre y tu
+              email se usan para darte acceso y avisarte de lo que afecta a tu cuenta; tienes los detalles y tus
+              derechos en la <Link to="/privacidad" className="underline hover:text-oso">política de privacidad</Link>.
+            </p>
             <Boton tono="solido" type="submit" disabled={enviando} className="w-full">
               {enviando ? 'Activando…' : 'Activar mi cuenta'}
             </Boton>

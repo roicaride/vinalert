@@ -7,6 +7,8 @@ import { Testigo } from '../ui/Estados';
 import { Rejilla } from '../ui/Panel';
 import { CORREO_CONTACTO, EQUIPO, IDIOMAS } from './portada/textos';
 import { useIdioma } from './portada/useIdioma';
+import PieLegal from './legal/PieLegal';
+import { useConfiguracionLegal } from './legal/useConfiguracionLegal';
 
 /**
  * La portada: lo que ve quien todavia no es usuario.
@@ -69,9 +71,13 @@ function SelectorIdioma({ codigo, cambiar, etiqueta }) {
 export default function Portada() {
   const [codigo, t, cambiarIdioma] = useIdioma();
   const hora = useHora();
-  const correo = `mailto:${CORREO_CONTACTO}?subject=${encodeURIComponent(t.contacto.asunto)}`;
+  // El email de contacto es el del titular, editable en Administracion; el de
+  // textos.js solo se usa mientras no este configurado.
+  const config = useConfiguracionLegal();
+  const contacto = config?.titular_email || CORREO_CONTACTO;
+  const correo = `mailto:${contacto}?subject=${encodeURIComponent(t.contacto.asunto)}`;
   // Las cuentas se dan de alta por invitacion: quien no tiene una la pide.
-  const solicitar = `mailto:${CORREO_CONTACTO}?subject=${encodeURIComponent(t.nav.asuntoAcceso)}`;
+  const solicitar = `mailto:${contacto}?subject=${encodeURIComponent(t.nav.asuntoAcceso)}`;
 
   const nodos = [
     { id: 'N-01', valor: t.portada.online, tinta: 'text-brote', tono: 'brote' },
@@ -292,7 +298,7 @@ export default function Portada() {
               <a href={correo} className={claseBoton('solido', 'lg')}>
                 {t.portada.demo}
               </a>
-              <span className="font-mono text-sm text-oso-3">{CORREO_CONTACTO}</span>
+              <span className="font-mono text-sm text-oso-3">{contacto}</span>
             </div>
           </div>
         </section>
@@ -313,6 +319,7 @@ export default function Portada() {
             {t.nav.crear}
           </a>
         </div>
+        <PieLegal className="w-full border-t border-linea pt-4" />
       </footer>
     </div>
   );

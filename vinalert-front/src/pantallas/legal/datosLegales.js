@@ -33,6 +33,9 @@ export const CAMPOS_LEGALES = [
 
 export const PENDIENTE = '[pendiente de completar]';
 
+/** Fecha de la ultima revision de los textos legales. Cambiarla al cambiar un texto. */
+export const ACTUALIZADO = '13 de octubre de 2026';
+
 /** El valor de un dato, o la marca de pendiente: nunca se publica un dato inventado. */
 export function dato(config, clave) {
   const v = config?.[clave];

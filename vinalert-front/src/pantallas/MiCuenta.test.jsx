@@ -87,3 +87,9 @@ test('cerrar sesion en todos los dispositivos saca tambien de este', async () =>
   expect(await screen.findByRole('button', { name: 'Iniciar sesión' })).toBeInTheDocument();
   expect(localStorage.getItem(LLAVE_TOKEN)).toBeNull();
 });
+
+test('mi cuenta enlaza a la politica de privacidad', async () => {
+  abrir();
+  const pie = await screen.findByRole('navigation', { name: 'Información legal' });
+  expect(pie.querySelector('a[href="/privacidad"]')).not.toBeNull();
+});

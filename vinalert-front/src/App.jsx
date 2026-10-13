@@ -15,6 +15,10 @@ import Foliar from './pantallas/Foliar';
 import Analisis from './pantallas/Analisis';
 import Administracion from './pantallas/Administracion';
 import Invitacion from './pantallas/Invitacion';
+import AvisoLegal from './pantallas/legal/AvisoLegal';
+import Condiciones from './pantallas/legal/Condiciones';
+import Cookies from './pantallas/legal/Cookies';
+import Privacidad from './pantallas/legal/Privacidad';
 import Login from './pantallas/Login';
 import MiCuenta from './pantallas/MiCuenta';
 import Recuperar from './pantallas/Recuperar';
@@ -120,6 +124,10 @@ export default function App() {
             <Route path="/recuperar" element={<Recuperar />} />
             <Route path="/restablecer" element={<Restablecer />} />
             <Route path="/invitacion" element={<Invitacion />} />
+            <Route path="/aviso-legal" element={<AvisoLegal />} />
+            <Route path="/privacidad" element={<Privacidad />} />
+            <Route path="/cookies" element={<Cookies />} />
+            <Route path="/condiciones" element={<Condiciones />} />
             <Route path="/" element={<Inicio />} />
             <Route path="/parcelas" element={<RutaProtegida><Entrada /></RutaProtegida>} />
             <Route path="/admin" element={<RutaProtegida><Administracion /></RutaProtegida>} />
