@@ -3,6 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 import { Marbete } from '../ui/Estados';
+import { CAPAS } from './capasMapa';
 import { APAGADO, BROTE, LOUSA, MONO, OSO, escaparHtml, fichaNodo, nombreNodo } from './mapaFichas';
 
 /**
@@ -16,27 +17,6 @@ import { APAGADO, BROTE, LOUSA, MONO, OSO, escaparHtml, fichaNodo, nombreNodo } 
  * BROTE para el nodo que reporta, gris para el que esta caido: el mismo codigo
  * de tinta que en el resto de la aplicacion.
  */
-
-const CAPAS = {
-  satelite: {
-    nombre: 'Satélite',
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, IGN',
-    maxZoom: 20,
-  },
-  oscuro: {
-    nombre: 'Oscuro',
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
-    maxZoom: 20,
-  },
-  callejero: {
-    nombre: 'Callejero',
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    maxZoom: 20,
-  },
-};
 
 function iconoNodo(numero, activo) {
   const tinta = activo ? BROTE : APAGADO;
@@ -104,7 +84,11 @@ export default function MapaSensores({ parcela, sensores = [] }) {
     L.control.zoom({ position: 'bottomright' }).addTo(mapa);
 
     const capa = CAPAS[tipoCapa] || CAPAS.satelite;
-    L.tileLayer(capa.url, { attribution: capa.attribution, maxZoom: capa.maxZoom }).addTo(mapa);
+    L.tileLayer(capa.url, {
+      attribution: capa.attribution,
+      maxNativeZoom: capa.maxNativeZoom,
+      maxZoom: capa.maxZoom,
+    }).addTo(mapa);
 
     const limites = L.latLngBounds();
 
