@@ -20,9 +20,9 @@ class Usuario(Base):
     # Nula mientras la cuenta esta pendiente: invitada pero sin aceptar.
     hashed_password = Column(String, nullable=True)
     rol = Column(String, default="agricultor")
-    # Administrador del sistema (listado de cuentas, dispositivos ESP32). Solo
-    # se da a mano en la BD o con semilla_inicial.py: ningun endpoint lo
-    # concede. Antes se deducia del email, y el registro es publico.
+    # Administrador del sistema (cuentas, dispositivos, estado). Lo concede
+    # otro superadmin desde el panel (nunca el registro: no existe) o
+    # semilla_inicial.py. Antes se deducia del email.
     es_superadmin = Column(Boolean, nullable=False, default=False, server_default="false")
     # Va dentro de cada token de sesion. Subirla invalida todas las sesiones
     # abiertas de la cuenta: al restablecer o cambiar la contrasena y al
@@ -31,13 +31,18 @@ class Usuario(Base):
     # Cuando se dio de alta. Nula en las cuentas anteriores a la migracion
     # 2026-09-18: esa fecha no se guardaba y no se puede reconstruir.
     creado_en = Column(DateTime, default=_ahora_madrid)
+    # Desactivada desde el panel: no entra y sus sesiones no valen. Reversible.
+    activo = Column(Boolean, nullable=False, default=True, server_default="true")
+    # Eliminada (derecho de supresion): sus datos personales se han borrado y
+    # la fila solo queda para que las referencias historicas no se rompan.
+    eliminado_en = Column(DateTime, nullable=True)
 
     parcelas_asociadas = relationship("ParcelaUsuario", back_populates="usuario", cascade="all, delete-orphan")
 
     @property
     def pendiente(self) -> bool:
         """Invitada pero sin aceptar: todavia no ha puesto contrasena."""
-        return self.hashed_password is None
+        return self.hashed_password is None and self.eliminado_en is None
 
 
 class Parcela(Base):

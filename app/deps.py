@@ -43,7 +43,7 @@ def _usuario_del_token(payload: dict, db: Session) -> Usuario:
     except (TypeError, ValueError):
         raise _credenciales_invalidas()
     user = db.query(Usuario).filter(Usuario.id == user_id).first()
-    if user is None or user.pendiente:
+    if user is None or user.pendiente or not user.activo:
         raise _credenciales_invalidas()
     # Los tokens anteriores a las versiones de sesion no llevan "ver": valen
     # como 0, el valor inicial, para que nadie pierda la sesion al desplegar.
@@ -130,7 +130,7 @@ def es_superadmin(user: Usuario) -> bool:
     nunca el email: el registro es publico y cualquiera podria registrar el
     email "del admin" en una BD donde esa cuenta aun no exista.
     """
-    return bool(user.es_superadmin)
+    return bool(user.es_superadmin) and bool(user.activo)
 
 
 def require_superadmin(current_user: Usuario = Depends(get_current_user)) -> Usuario:

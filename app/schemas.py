@@ -111,6 +111,17 @@ class UsuarioAdminResp(BaseModel):
     creado_en: Optional[datetime] = None
     n_parcelas: int
     pendiente: bool = False
+    activo: bool = True
+    es_superadmin: bool = False
+    # rol "admin": entra en todas las parcelas como gestor.
+    acceso_total: bool = False
+
+
+class CuentaAdminUpdate(BaseModel):
+    """Lo que el superadmin puede cambiar de una cuenta. Solo los campos enviados."""
+    activo: Optional[bool] = None
+    es_superadmin: Optional[bool] = None
+    acceso_total: Optional[bool] = None
 
 
 def _nombre_sin_espacios(valor):

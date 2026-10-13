@@ -69,6 +69,14 @@ def login_for_access_token(
             detail="Email o contraseña incorrectos",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    if not user.activo:
+        # Solo se dice con la contrasena correcta: a quien la prueba sin
+        # saberla no se le revela que la cuenta existe.
+        limites.registrar_intento(db, "login", email, ip, "fallo")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"codigo": "cuenta_desactivada", "mensaje": "Esta cuenta está desactivada. Habla con el administrador."},
+        )
     limites.registrar_intento(db, "login", email, ip, "exito")
     return Token(access_token=crear_token_sesion(user), token_type="bearer")
 
@@ -117,7 +125,7 @@ def recuperar_password(
         raise _demasiados_intentos(60)
 
     user = db.query(Usuario).filter(func.lower(Usuario.email) == body.email).first()
-    if user is None:
+    if user is None or not user.activo:
         limites.registrar_intento(db, "recuperacion", body.email, ip, "fallo")
     elif limites.recuperacion_email_agotada(db, body.email):
         limites.registrar_intento(db, "recuperacion", body.email, ip, "bloqueado")
@@ -174,7 +182,7 @@ def aceptar_invitacion(body: AceptarInvitacion, db: Session = Depends(get_db)) -
         user = tokens_cuenta.consumir(db, body.token, tokens_cuenta.INVITACION)
     except tokens_cuenta.TokenInvalido:
         raise enlace_invalido()
-    if not user.pendiente:
+    if not user.pendiente or not user.activo:
         db.rollback()
         raise enlace_invalido()
 
