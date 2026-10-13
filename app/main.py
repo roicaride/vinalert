@@ -8,10 +8,10 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .database import Base, engine
+from .database import Base, SessionLocal, engine
 from .routers import admin, auth, clima_fetch, dispositivos, foliar, logs, miembros, parcelas, sensores, tratamientos
 from .services.clima_scheduler import refrescar_clima_todas_parcelas
-from .services import correo
+from .services import correo, limites
 from .services.consolidacion import consolidar_todas_parcelas
 
 load_dotenv()
@@ -54,6 +54,24 @@ def _programar_jobs(scheduler_: BackgroundScheduler) -> None:
         id="consolidar_diario",
         replace_existing=True,
     )
+
+    # Registros de acceso de mas de 90 dias y enlaces de cuenta caducados.
+    scheduler_.add_job(
+        _limpiar_accesos,
+        "interval",
+        hours=24,
+        coalesce=True,
+        id="limpiar_accesos",
+        replace_existing=True,
+    )
+
+
+def _limpiar_accesos() -> None:
+    db = SessionLocal()
+    try:
+        limites.limpiar_antiguos(db)
+    finally:
+        db.close()
 
 
 

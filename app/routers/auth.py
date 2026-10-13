@@ -11,6 +11,7 @@ from ..deps import ROL_GESTOR, es_superadmin, get_current_user
 from ..models import ParcelaUsuario, Usuario
 from ..schemas import (
     AceptarInvitacion,
+    CambiarPassword,
     InvitacionInfo,
     RecuperarPassword,
     RestablecerPassword,
@@ -210,4 +211,42 @@ def reenviar_invitacion(
         raise HTTPException(status_code=409, detail="Esa persona ya ha activado su cuenta.")
 
     tokens_cuenta.enviar_invitacion_a(db, invitado, background, creado_por=current_user, parcela=parcela)
+    return Response(status_code=204)
+
+
+@router.post("/cambiar-password", response_model=Token)
+def cambiar_password(
+    body: CambiarPassword,
+    request: Request,
+    current_user: Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Any:
+    """
+    Cierra las demas sesiones y devuelve una nueva, para que quien la cambia
+    siga dentro. Fallar la contrasena actual cuenta como un login fallido: con
+    una sesion robada tampoco se pueden probar contrasenas sin limite.
+    """
+    ip = ip_cliente(request)
+    minutos = limites.bloqueo_login(db, current_user.email, ip)
+    if minutos is not None:
+        limites.registrar_intento(db, "login", current_user.email, ip, "bloqueado")
+        raise _demasiados_intentos(minutos)
+    if not verificar_password(body.actual, current_user.hashed_password):
+        limites.registrar_intento(db, "login", current_user.email, ip, "fallo")
+        raise HTTPException(status_code=400, detail="La contraseña actual no es correcta.")
+
+    current_user.hashed_password = obtener_password_hash(body.nueva)
+    current_user.token_version += 1
+    db.commit()
+    return Token(access_token=crear_token_sesion(current_user), token_type="bearer")
+
+
+@router.post("/cerrar-sesiones", status_code=204)
+def cerrar_sesiones(
+    current_user: Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Cerrar sesion en todos los dispositivos, este incluido."""
+    current_user.token_version += 1
+    db.commit()
     return Response(status_code=204)

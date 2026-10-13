@@ -147,6 +147,11 @@ class RestablecerPassword(BaseModel):
     password: PasswordNueva
 
 
+class CambiarPassword(BaseModel):
+    actual: str = Field(max_length=128)
+    nueva: PasswordNueva
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str
