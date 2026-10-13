@@ -2,7 +2,7 @@ from datetime import date, datetime
 from typing import Annotated, Literal, Optional
 from zoneinfo import ZoneInfo
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict, EmailStr, Field, field_validator
 
 _TZ_MADRID = ZoneInfo("Europe/Madrid")
 
@@ -54,28 +54,25 @@ class ParcelaUpdate(BaseModel):
     longitud: Optional[float] = Field(default=None, ge=-180, le=180)
 
 
-class UsuarioCreate(BaseModel):
-    """
-    Lo que manda el formulario de registro. Sin `rol` a proposito: el registro
-    publico no puede elegir sus permisos (ver test_autorizacion).
-    """
-    nombre: str = Field(min_length=1, max_length=120)
-    email: EmailStr
-    password: str = Field(min_length=8, max_length=128)
-
-    @field_validator("nombre", mode="before")
-    @classmethod
-    def _nombre_sin_espacios(cls, v):
-        return v.strip() if isinstance(v, str) else v
-
-    @field_validator("email", mode="before")
-    @classmethod
-    def _email_normalizado(cls, v):
-        # Un email es el mismo con o sin mayusculas: normalizarlo aqui evita que
-        # «Ana@x.com» y «ana@x.com» acaben siendo dos cuentas distintas.
-        return v.strip().lower() if isinstance(v, str) else v
+def _password_nueva(valor: str) -> str:
+    from .services.politica_password import validar
+    validar(valor)
+    return valor
 
 
+# Una contrasena que alguien elige ahora (invitacion, restablecer, cambiar).
+# Las cuentas antiguas con contrasenas mas cortas siguen entrando: el login no
+# usa este tipo.
+PasswordNueva = Annotated[str, Field(max_length=128), AfterValidator(_password_nueva)]
+
+
+def _email_normalizado(valor):
+    # Un email es el mismo con o sin mayusculas: normalizarlo al entrar evita
+    # que «Ana@x.com» y «ana@x.com» acaben siendo dos cuentas distintas.
+    return valor.strip().lower() if isinstance(valor, str) else valor
+
+
+EmailNormalizado = Annotated[EmailStr, BeforeValidator(_email_normalizado)]
 
 
 class SensorUpdate(BaseModel):
@@ -92,13 +89,6 @@ class ProvisionarSensores(BaseModel):
 
 
 # ─── Responses ───────────────────────────────────────────────────────────────
-
-class UsuarioResp(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    nombre: str
-    email: str
-
 
 class UsuarioMeResp(BaseModel):
     model_config = ConfigDict(from_attributes=True)

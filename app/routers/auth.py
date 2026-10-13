@@ -5,32 +5,13 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from ..auth import obtener_password_hash, verificar_password, crear_token_acceso
+from ..auth import crear_token_sesion, verificar_password
 from ..database import get_db
 from ..deps import es_superadmin, get_current_user
 from ..models import Usuario
-from ..schemas import Token, UsuarioCreate, UsuarioResp, UsuarioMeResp
+from ..schemas import Token, UsuarioMeResp
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-
-@router.post("/register", response_model=UsuarioResp, status_code=201)
-def register_usuario(body: UsuarioCreate, db: Session = Depends(get_db)) -> Any:
-    # body.email ya llega en minusculas (UsuarioCreate); se compara en minusculas
-    # tambien contra la BD por las cuentas antiguas guardadas con mayusculas.
-    if db.query(Usuario).filter(func.lower(Usuario.email) == body.email).first():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email ya registrado")
-
-    user = Usuario(
-        nombre=body.nombre,
-        email=body.email,
-        hashed_password=obtener_password_hash(body.password),
-        rol="agricultor",
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return user
 
 
 @router.post("/token", response_model=Token)
@@ -40,13 +21,15 @@ def login_for_access_token(
 ) -> Any:
     email = form_data.username.strip().lower()
     user = db.query(Usuario).filter(func.lower(Usuario.email) == email).first()
-    if not user or not verificar_password(form_data.password, user.hashed_password):
+    # Sin cuenta o con la cuenta pendiente se verifica igualmente (contra un
+    # hash ficticio): mismo tiempo de respuesta en todos los casos.
+    if not verificar_password(form_data.password, user.hashed_password if user else None):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email o contraseña incorrectos",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return Token(access_token=crear_token_acceso({"sub": str(user.id)}), token_type="bearer")
+    return Token(access_token=crear_token_sesion(user), token_type="bearer")
 
 
 @router.get("/me", response_model=UsuarioMeResp)

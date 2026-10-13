@@ -48,8 +48,25 @@ def obtener_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
-def verificar_password(plain_password: str, hashed_password: str) -> bool:
+# Contra este hash se verifica cuando la cuenta no existe o esta pendiente: el
+# login tarda lo mismo en todos los casos y el tiempo de respuesta no delata
+# que emails tienen cuenta.
+_HASH_FICTICIO = pwd_context.hash("cuenta-inexistente-para-igualar-tiempos")
+
+
+def verificar_password(plain_password: str, hashed_password: Optional[str]) -> bool:
+    if hashed_password is None:
+        pwd_context.verify(plain_password, _HASH_FICTICIO)
+        return False
     return pwd_context.verify(plain_password, hashed_password)
+
+
+def crear_token_sesion(usuario) -> str:
+    """
+    El token de sesion de una persona. Lleva su token_version: subirla la
+    invalida (ver deps.get_current_user).
+    """
+    return crear_token_acceso({"sub": str(usuario.id), "ver": usuario.token_version})
 
 
 def crear_token_acceso(data: dict) -> str:

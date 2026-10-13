@@ -82,23 +82,3 @@ def test_admin_no_puede_inventarse_una_parcela(db_session):
     with pytest.raises(HTTPException) as exc:
         parcela_con_lectura(9999, admin, db_session)
     assert exc.value.status_code == 404
-
-
-def test_el_registro_publico_no_puede_fijar_el_rol(client, db_session):
-    """
-    Guarda contra escalada de privilegios: si alguien anade `rol` a
-    UsuarioCreate, este test debe fallar.
-    """
-    resp = client.post(
-        "/auth/register",
-        json={
-            "nombre": "Listillo",
-            "email": "listillo@test.dev",
-            "password": "clave12345",
-            "rol": "admin",
-        },
-    )
-    assert resp.status_code == 201
-
-    creado = db_session.query(Usuario).filter_by(email="listillo@test.dev").first()
-    assert creado.rol == "agricultor", "el registro publico ha fijado un rol"

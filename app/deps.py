@@ -43,7 +43,11 @@ def _usuario_del_token(payload: dict, db: Session) -> Usuario:
     except (TypeError, ValueError):
         raise _credenciales_invalidas()
     user = db.query(Usuario).filter(Usuario.id == user_id).first()
-    if user is None:
+    if user is None or user.pendiente:
+        raise _credenciales_invalidas()
+    # Los tokens anteriores a las versiones de sesion no llevan "ver": valen
+    # como 0, el valor inicial, para que nadie pierda la sesion al desplegar.
+    if payload.get("ver", 0) != user.token_version:
         raise _credenciales_invalidas()
     return user
 

@@ -15,10 +15,6 @@ def _registrar(client, email, nombre="Persona", password="clave12345"):
     return registrar(client, email, nombre=nombre, password=password)
 
 
-def _registro_publico(client, email, nombre="Persona", password="clave12345"):
-    return client.post("/auth/register", json={"nombre": nombre, "email": email, "password": password})
-
-
 def _token(client, email, password="clave12345"):
     resp = client.post("/auth/token", data={"username": email, "password": password})
     return {"Authorization": f"Bearer {resp.json()['access_token']}"}
@@ -31,39 +27,8 @@ def _admin(client, db_session):
 
 
 # ---------------------------------------------------------------------------
-# Registro
+# Login
 # ---------------------------------------------------------------------------
-
-def test_el_registro_guarda_la_fecha_de_alta(client, db_session):
-    antes = datetime.now() - timedelta(days=1)
-    assert _registro_publico(client, "nueva@vinalert.dev").status_code == 201
-
-    u = db_session.query(Usuario).filter_by(email="nueva@vinalert.dev").one()
-    assert u.creado_en is not None
-    assert u.creado_en > antes
-
-
-def test_el_registro_rechaza_un_email_que_no_es_un_email(client):
-    assert _registro_publico(client, "hola").status_code == 422
-
-
-def test_el_registro_rechaza_una_contrasena_de_menos_de_8(client):
-    assert _registro_publico(client, "corta@vinalert.dev", password="1234567").status_code == 422
-
-
-def test_el_registro_rechaza_un_nombre_vacio(client):
-    assert _registro_publico(client, "sin@vinalert.dev", nombre="   ").status_code == 422
-
-
-def test_el_email_se_guarda_en_minusculas_y_sin_espacios(client, db_session):
-    assert _registro_publico(client, "  Mayus@VinAlert.dev ").status_code == 201
-    assert db_session.query(Usuario).filter_by(email="mayus@vinalert.dev").count() == 1
-
-
-def test_no_se_puede_registrar_el_mismo_email_cambiando_mayusculas(client):
-    assert _registro_publico(client, "repe@vinalert.dev").status_code == 201
-    assert _registro_publico(client, "REPE@vinalert.dev").status_code == 400
-
 
 def test_el_login_no_distingue_mayusculas_en_el_email(client):
     _registrar(client, "login@vinalert.dev")
