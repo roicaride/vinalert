@@ -111,7 +111,11 @@ class LogSensor(Base):
     __tablename__ = "log_sensores"
     # Todas las consultas de lecturas van por parcela y rango de fechas: sin
     # este indice, agrupar un ano de lecturas recorreria la tabla entera.
-    __table_args__ = (Index("ix_log_sensores_parcela_fecha", "parcela_id", "fecha_hora"),)
+    __table_args__ = (
+        Index("ix_log_sensores_parcela_fecha", "parcela_id", "fecha_hora"),
+        # Para encontrar rapido un reenvio de la misma lectura (routers/logs.py).
+        Index("ix_log_sensores_sensor_fecha", "sensor_id", "fecha_hora"),
+    )
     id = Column(Integer, primary_key=True, index=True)
     parcela_id = Column(Integer, ForeignKey("parcelas.id"))
     sensor_id = Column(Integer, ForeignKey("sensores.id"))

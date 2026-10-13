@@ -264,6 +264,7 @@ psql "$DATABASE_URL" -f migracion_2026_09_19_suelo_por_sensor.sql
 psql "$DATABASE_URL" -f migracion_2026_10_13_superadmin.sql
 psql "$DATABASE_URL" -f migracion_2026_10_13_cuentas.sql
 psql "$DATABASE_URL" -f migracion_2026_10_13_admin.sql
+psql "$DATABASE_URL" -f migracion_2026_10_13_lecturas_duplicadas.sql
 ```
 
 Back up the database before applying migrations to a production instance.

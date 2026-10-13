@@ -49,3 +49,33 @@
   * Frontend: Nginx sirviendo la SPA de React compilada.
   * Base de datos: PostgreSQL con volumen persistente.
   * Scheduler / Worker: Proceso cron autónomo para consolidación nocturna.
+
+[REVISAR AL FINAL] LEGAL (anotado el 2026-10-13)
+--------------------------------------------------------------------------------
+El cliente es un centro de investigación público (universidad). Antes de
+publicar, revisar con calma, idealmente con su servicio jurídico:
+- Rellenar en Administración > Configuración los datos del titular (la
+  universidad) y del encargado (nosotros). Mientras falten, las páginas
+  legales muestran "[pendiente de completar]".
+- Base jurídica: siendo un organismo público, lo propio es "misión realizada
+  en interés público" (art. 6.1.e RGPD) en vez de contrato/interés legítimo.
+  Ajustar el texto de /privacidad.
+- Delegado de Protección de Datos: las universidades públicas están obligadas
+  a tenerlo (art. 37.1.a RGPD). Añadir su contacto a la configuración y a
+  /privacidad.
+- Contrato de encargo de tratamiento (art. 28 RGPD) firmado entre la
+  universidad y nosotros.
+- Que un abogado revise aviso legal, privacidad, cookies y condiciones.
+- Open-Meteo: su plan gratuito admite "investigación pública en instituciones
+  públicas"; confirmarlo por email (info@open-meteo.com) para tenerlo por
+  escrito, y mostrar su atribución (CC BY 4.0) junto a los datos de clima, no
+  solo en el aviso legal.
+
+[PENDIENTE] INGESTA
+--------------------------------------------------------------------------------
+- Duplicados exactos: resuelto (2026-10-13).
+- Causa de los reenvíos: cada lectura espera a Open-Meteo (hasta 25 s) y el
+  ESP32 corta a los 8 s. Sacar esa llamada de la petición de ingesta.
+- Validar valores imposibles (NaN, infinitos, rangos físicos) y fechas
+  absurdas (1970, futuro lejano).
+- Limitar el tamaño del Excel foliar que se sube.

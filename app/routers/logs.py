@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Any, Union
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -14,9 +14,27 @@ router = APIRouter(prefix="/logs", tags=["logs"])
 
 
 
+_CAMPOS_LECTURA = ("parcela_id", "sensor_id", "fecha_hora", "humedad_suelo_pct", "temperatura_suelo", "bateria")
+
+
+def _lectura_identica(body: LogSensorCreate, db: Session):
+    """
+    La lectura ya guardada que es EXACTAMENTE igual a esta: mismo sensor, misma
+    hora y los mismos valores, con un valor ausente igual solo a otro ausente.
+    Cualquier diferencia hace que sea otra lectura.
+    """
+    q = db.query(LogSensor)
+    for campo in _CAMPOS_LECTURA:
+        valor = getattr(body, campo)
+        columna = getattr(LogSensor, campo)
+        q = q.filter(columna.is_(None) if valor is None else columna == valor)
+    return q.order_by(LogSensor.id).first()
+
+
 @router.post("/sensor/", response_model=LogSensorResp, status_code=201)
 def crear_log_sensor(
     body: LogSensorCreate,
+    response: Response,
     emisor: Union[Usuario, DispositivoIoT] = Depends(get_emisor_lecturas),
     db: Session = Depends(get_db),
 ) -> Any:
@@ -35,10 +53,17 @@ def crear_log_sensor(
             detail="El sensor indicado no existe o no pertenece a esta parcela.",
         )
 
-    log = LogSensor(**body.model_dump())
-    db.add(log)
-    db.commit()
-    db.refresh(log)
+    log = _lectura_identica(body, db)
+    if log is not None:
+        # Reenvio de una lectura ya guardada (el ESP32 no recibio la respuesta
+        # a tiempo y la volvio a mandar): no se duplica, y el 200 le dice al
+        # aparato que ya esta subida para que la saque de su buffer.
+        response.status_code = 200
+    else:
+        log = LogSensor(**body.model_dump())
+        db.add(log)
+        db.commit()
+        db.refresh(log)
 
     log.sensor_etiqueta = sensor.etiqueta
     log.sensor_profundidad_cm = sensor.profundidad_cm
