@@ -22,7 +22,9 @@ with a PostgreSQL time series, and a React web application used in the field.
   - [Firmware](#firmware)
 - [Configuration](#configuration)
 - [Database migrations](#database-migrations)
+- [Backups](#backups)
 - [API reference](#api-reference)
+- [Accounts](#accounts)
 - [Access model](#access-model)
 - [Scheduled jobs](#scheduled-jobs)
 - [Testing](#testing)
@@ -103,7 +105,7 @@ duty cycle can be tuned from the web UI without reflashing any node.
 │   ├── schemas.py            Pydantic request/response schemas
 │   ├── auth.py               Password hashing and JWT issuance
 │   └── deps.py               Authentication and per-plot authorization
-├── tests/                    Backend test suite (pytest, 305 tests)
+├── tests/                    Backend test suite (pytest)
 ├── vinalert-front/           React single-page application
 │   └── src/
 │       ├── pantallas/        Screens (status, sensors, analysis, treatments, …)
@@ -215,6 +217,18 @@ Backend variables, read from `.env`:
 | `CORS_ORIGINS` | No | `http://localhost:5173` | Comma-separated list of allowed origins. |
 | `CLIMA_INTERVALO_HORAS` | No | `3` | Hours between weather refreshes. |
 | `WEATHER_PROVIDER` | No | `open_meteo` | Weather provider key. |
+| `SMTP_HOST` | No | — | SMTP server for invitations and password recovery. Without it, emails (and their links) are written to the log. |
+| `SMTP_PORT` | No | `587` | `587` uses STARTTLS, `465` uses SSL. |
+| `SMTP_USUARIO` / `SMTP_PASSWORD` | No | — | SMTP credentials. |
+| `CORREO_REMITENTE` | No | — | `From` header, e.g. `Viñalert <no-responder@your-domain>`. |
+| `URL_WEB` | With `SMTP_HOST` | `http://localhost:5173` | Public URL of the web app, used to build the links in emails. |
+
+The API refuses to start if `SECRET_KEY` is missing, shorter than 32 characters or one of
+the example values published in this repository, or if `SMTP_HOST` is set without `URL_WEB`.
+
+Behind a reverse proxy, start the API with `--proxy-headers --forwarded-allow-ips=<proxy ip>`:
+the login rate limits are per client IP, and without those flags every request would share
+the proxy's.
 
 Frontend variables, read from `vinalert-front/.env`:
 
@@ -248,6 +262,7 @@ psql "$DATABASE_URL" -f migracion_2026_09_18_usuarios_alta.sql
 psql "$DATABASE_URL" -f migracion_2026_09_18_quitar_riego.sql
 psql "$DATABASE_URL" -f migracion_2026_09_19_suelo_por_sensor.sql
 psql "$DATABASE_URL" -f migracion_2026_10_13_superadmin.sql
+psql "$DATABASE_URL" -f migracion_2026_10_13_cuentas.sql
 ```
 
 Back up the database before applying migrations to a production instance.
@@ -282,17 +297,25 @@ kept for three years.
 
 ## API reference
 
-All endpoints except `/auth/register` and `/auth/token` require a bearer token:
-`Authorization: Bearer <token>`. `/{id}` below is the plot id.
+All endpoints except `/auth/token`, `/auth/recuperar`, `/auth/restablecer` and
+`/auth/invitacion*` require a bearer token: `Authorization: Bearer <token>`. `/{id}` below
+is the plot id.
 
 ### Authentication and administration
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `POST` | `/auth/register` | Register a user. |
-| `POST` | `/auth/token` | Exchange credentials for a JWT. |
+| `POST` | `/auth/token` | Exchange credentials for a JWT. Rate limited (429). |
 | `GET` | `/auth/me` | Current user. |
+| `POST` | `/auth/recuperar` | Email a password reset link. Always `202`, whether or not the account exists. |
+| `POST` | `/auth/restablecer` | Set a new password with a reset link; closes every open session. |
+| `GET` | `/auth/invitacion?token=` | Who invited whom, and to which plot. |
+| `POST` | `/auth/invitacion/aceptar` | Activate an invited account (name and password); returns a JWT. |
+| `POST` | `/auth/invitaciones/{user_id}/reenviar` | Resend a pending invitation. Superadmin, or a manager of one of the person's plots. |
+| `POST` | `/auth/cambiar-password` | Change the password; closes the other sessions and returns a new JWT. |
+| `POST` | `/auth/cerrar-sesiones` | Sign out everywhere. |
 | `GET` | `/admin/usuarios` | Every account with its sign-up date and plot count. Superadmin only. |
+| `POST` | `/admin/invitaciones` | Invite a new client (an account with no plots). Superadmin only. |
 
 ### Plots
 
@@ -343,6 +366,26 @@ All endpoints except `/auth/register` and `/auth/token` require a bearer token:
 | `GET` `POST` | `/parcelas/{id}/usuarios` | List members or add one by email. |
 | `PATCH` `DELETE` | `/parcelas/{id}/usuarios/{uid}` | Change a member's role or remove them. |
 
+## Accounts
+
+There is no public sign-up: accounts are created by invitation. The superadmin invites new
+clients from Administración; a plot manager invites people to their plot from Acceso, with a
+role. Inviting an email with no account creates a *pending* account (no password) and its
+plot access right away, and emails a single-use link valid for 7 days, where the person
+picks their name and password. The link reaching that inbox is what verifies the email.
+
+- **Password recovery:** a single-use link valid for 1 hour. Requesting a new link voids
+  the previous one. Only the SHA-256 of each link is stored.
+- **Rate limits:** 5 failed logins per account and 20 login attempts per IP in any
+  15-minute window, answered with `429` and `Retry-After`. Lockouts are temporary on
+  purpose — a permanent one would let anyone lock others out — and password recovery still
+  works while locked. Recovery requests: 10 per IP and 3 emails per account per hour.
+- **Sessions:** every JWT carries the account's `token_version`. Resetting or changing the
+  password, or "sign out everywhere", bumps it and invalidates every earlier token.
+- **New passwords:** at least 10 characters and not in a list of common ones. Older
+  accounts with shorter passwords can still sign in.
+- **Audit:** every login and recovery attempt is stored in `intentos_acceso` (90 days).
+
 ## Access model
 
 Authorization is evaluated per plot, not globally. A user's role in one plot says
@@ -354,24 +397,25 @@ nothing about their access to another.
 | `gestor` | Everything above, plus recording treatments, uploading foliar data and configuring sensors. |
 | `admin` | Everything above, plus plot settings, membership and device management. |
 
-A superadmin, identified by a configured email address, can create plots and register
-new users. Device tokens are a separate principal type (`dispositivo_iot`), scoped to a
+The superadmin (the `usuarios.es_superadmin` flag, set only in the database or by
+`semilla_inicial.py`) can list every account, invite clients and manage devices. Device tokens are a separate principal type (`dispositivo_iot`), scoped to a
 single plot and device, and can only reach the ingestion and configuration endpoints.
 
 ## Scheduled jobs
 
-Both jobs run under APScheduler with `misfire_grace_time` and `coalesce` enabled, so a
+The jobs run under APScheduler with `misfire_grace_time` and `coalesce` enabled, so a
 suspended or restarted host recovers missed runs instead of silently skipping them.
 
 | Job | Schedule | Purpose |
 | --- | --- | --- |
 | `refrescar_clima` | Every `CLIMA_INTERVALO_HORAS` (default 3), plus once at startup | Fetch current weather for every plot. |
-| `consolidar_diario` | Daily at 02:00 `Europe/Madrid` | Rebuild the last 7 days of daily soil and weather aggregates. |
+| `consolidar_diario` | Every hour, plus once at startup | Rebuild the last days of daily soil and weather aggregates (upsert, so repeating is harmless). |
+| `limpiar_accesos` | Daily | Delete login attempts older than 90 days and account links expired over 30 days ago. |
 
 ## Testing
 
 ```bash
-# Backend — 305 tests, SQLite in-memory, no external services required
+# Backend — SQLite in-memory, no external services required
 pytest
 
 # Frontend — 86 tests, mocked API responses
