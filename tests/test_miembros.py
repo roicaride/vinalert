@@ -37,16 +37,6 @@ def test_anadir_por_email_y_que_aparezca_en_su_listado(client, auth_headers, par
     assert len(suyas) == 1
 
 
-def test_email_sin_cuenta_da_404(client, auth_headers, parcela_id):
-    resp = client.post(
-        f"/parcelas/{parcela_id}/usuarios",
-        json={"email": "nadie@test.dev", "rol": "lectura"},
-        headers=auth_headers,
-    )
-    assert resp.status_code == 404
-    assert "registr" in resp.json()["detail"].lower()
-
-
 def test_anadir_dos_veces_da_409(client, auth_headers, parcela_id):
     _registrar(client, "invitado@test.dev")
     cuerpo = {"email": "invitado@test.dev", "rol": "lectura"}

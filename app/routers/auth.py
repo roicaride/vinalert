@@ -7,9 +7,16 @@ from sqlalchemy.orm import Session
 
 from ..auth import crear_token_sesion, obtener_password_hash, verificar_password
 from ..database import get_db
-from ..deps import es_superadmin, get_current_user
-from ..models import Usuario
-from ..schemas import RecuperarPassword, RestablecerPassword, Token, UsuarioMeResp
+from ..deps import ROL_GESTOR, es_superadmin, get_current_user
+from ..models import ParcelaUsuario, Usuario
+from ..schemas import (
+    AceptarInvitacion,
+    InvitacionInfo,
+    RecuperarPassword,
+    RestablecerPassword,
+    Token,
+    UsuarioMeResp,
+)
 from ..services import limites, tokens_cuenta
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -133,4 +140,74 @@ def restablecer_password(
     user.token_version += 1
     db.commit()
     limites.marcar_restablecimiento(db, user.email, ip_cliente(request))
+    return Response(status_code=204)
+
+
+@router.get("/invitacion", response_model=InvitacionInfo)
+def ver_invitacion(token: str, db: Session = Depends(get_db)) -> Any:
+    """Para la pantalla de bienvenida: a quien se invita, quien y a donde."""
+    try:
+        fila = tokens_cuenta.consultar(db, token, tokens_cuenta.INVITACION)
+    except tokens_cuenta.TokenInvalido:
+        raise enlace_invalido()
+    return InvitacionInfo(
+        email=fila.usuario.email,
+        invitado_por=fila.creado_por.nombre if fila.creado_por else None,
+        parcela=fila.parcela.nombre if fila.parcela else None,
+    )
+
+
+@router.post("/invitacion/aceptar", response_model=Token)
+def aceptar_invitacion(body: AceptarInvitacion, db: Session = Depends(get_db)) -> Any:
+    """Activa la cuenta y deja la sesion iniciada: no hace falta otro login."""
+    try:
+        user = tokens_cuenta.consumir(db, body.token, tokens_cuenta.INVITACION)
+    except tokens_cuenta.TokenInvalido:
+        raise enlace_invalido()
+    if not user.pendiente:
+        db.rollback()
+        raise enlace_invalido()
+
+    user.nombre = body.nombre
+    user.hashed_password = obtener_password_hash(body.password)
+    db.commit()
+    return Token(access_token=crear_token_sesion(user), token_type="bearer")
+
+
+@router.post("/invitaciones/{usuario_id}/reenviar", status_code=204)
+def reenviar_invitacion(
+    usuario_id: int,
+    background: BackgroundTasks,
+    current_user: Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    """
+    Lo puede hacer el superadmin o un gestor de alguna parcela de esa persona.
+    A cualquier otro, 404: como con una parcela ajena, no se confirma que la
+    cuenta exista.
+    """
+    invitado = db.query(Usuario).filter(Usuario.id == usuario_id).first()
+    if invitado is None:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    parcela = None
+    if not es_superadmin(current_user):
+        parcelas_del_invitado = db.query(ParcelaUsuario.parcela_id).filter(ParcelaUsuario.usuario_id == invitado.id)
+        comun = (
+            db.query(ParcelaUsuario)
+            .filter(
+                ParcelaUsuario.usuario_id == current_user.id,
+                ParcelaUsuario.rol == ROL_GESTOR,
+                ParcelaUsuario.parcela_id.in_(parcelas_del_invitado),
+            )
+            .first()
+        )
+        if comun is None:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        parcela = comun.parcela
+
+    if not invitado.pendiente:
+        raise HTTPException(status_code=409, detail="Esa persona ya ha activado su cuenta.")
+
+    tokens_cuenta.enviar_invitacion_a(db, invitado, background, creado_por=current_user, parcela=parcela)
     return Response(status_code=204)

@@ -1,19 +1,22 @@
 from typing import Any, List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import ROL_GESTOR, get_current_user, parcela_con_gestion, parcela_con_lectura
 from ..models import ParcelaUsuario, Usuario
 from ..schemas import MiembroCreate, MiembroResp, MiembroUpdate
+from ..services import tokens_cuenta
 
 router = APIRouter(prefix="/parcelas/{parcela_id}/usuarios", tags=["miembros"])
 
 
 def _a_resp(miembro: ParcelaUsuario, usuario: Usuario) -> MiembroResp:
     return MiembroResp(
-        usuario_id=usuario.id, nombre=usuario.nombre, email=usuario.email, rol=miembro.rol
+        usuario_id=usuario.id, nombre=usuario.nombre, email=usuario.email, rol=miembro.rol,
+        pendiente=usuario.pendiente,
     )
 
 
@@ -52,18 +55,24 @@ def listar_miembros(
 def anadir_miembro(
     parcela_id: int,
     body: MiembroCreate,
+    background: BackgroundTasks,
     current_user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Any:
-    parcela_con_gestion(parcela_id, current_user, db)
+    """
+    Da acceso a la parcela a una persona por su email. Si no tiene cuenta, se
+    le crea una pendiente y se le envia la invitacion: el acceso existe desde
+    ya y la persona solo tiene que poner nombre y contrasena.
+    """
+    parcela = parcela_con_gestion(parcela_id, current_user, db)
 
-    usuario = db.query(Usuario).filter(Usuario.email == body.email).first()
+    # En minusculas en los dos lados: las cuentas antiguas pueden tener el
+    # email guardado con mayusculas.
+    usuario = db.query(Usuario).filter(func.lower(Usuario.email) == body.email).first()
     if usuario is None:
-        # Error mas probable en uso real: el frontend necesita poder explicarlo.
-        raise HTTPException(
-            status_code=404,
-            detail="No hay ninguna cuenta con ese email. Esa persona debe registrarse primero.",
-        )
+        usuario = Usuario(nombre="", email=body.email, hashed_password=None, rol="agricultor")
+        db.add(usuario)
+        db.flush()
 
     ya = db.query(ParcelaUsuario).filter(
         ParcelaUsuario.parcela_id == parcela_id,
@@ -75,6 +84,8 @@ def anadir_miembro(
     miembro = ParcelaUsuario(parcela_id=parcela_id, usuario_id=usuario.id, rol=body.rol)
     db.add(miembro)
     db.commit()
+    if usuario.pendiente:
+        tokens_cuenta.enviar_invitacion_a(db, usuario, background, creado_por=current_user, parcela=parcela)
     return _a_resp(miembro, usuario)
 
 

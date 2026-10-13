@@ -110,6 +110,32 @@ class UsuarioAdminResp(BaseModel):
     rol: str
     creado_en: Optional[datetime] = None
     n_parcelas: int
+    pendiente: bool = False
+
+
+def _nombre_sin_espacios(valor):
+    return valor.strip() if isinstance(valor, str) else valor
+
+
+NombrePersona = Annotated[str, BeforeValidator(_nombre_sin_espacios), Field(min_length=1, max_length=120)]
+
+
+class InvitacionAdminCreate(BaseModel):
+    email: EmailNormalizado
+    nombre: NombrePersona
+
+
+class InvitacionInfo(BaseModel):
+    """Lo que ve quien abre el enlace de invitacion, antes de aceptar."""
+    email: str
+    invitado_por: Optional[str] = None
+    parcela: Optional[str] = None
+
+
+class AceptarInvitacion(BaseModel):
+    token: str = Field(max_length=200)
+    nombre: NombrePersona
+    password: PasswordNueva
 
 
 class RecuperarPassword(BaseModel):
@@ -349,7 +375,7 @@ class ComprobacionClimaResp(BaseModel):
 
 
 class MiembroCreate(BaseModel):
-    email: str
+    email: EmailNormalizado
     rol: Literal["gestor", "lectura"]
 
 
@@ -363,6 +389,8 @@ class MiembroResp(BaseModel):
     nombre: str
     email: str
     rol: str
+    # Invitada pero sin aceptar todavia (sin contrasena).
+    pendiente: bool = False
 
 
 class SueloDiarioSensorResp(BaseModel):
