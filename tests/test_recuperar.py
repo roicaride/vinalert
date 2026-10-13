@@ -152,3 +152,29 @@ def test_un_enlace_de_invitacion_no_sirve_para_restablecer(client, hora, db_sess
     u = registrar(client, "ana@x.es")
     token = tokens_cuenta.emitir(db_session, u, tokens_cuenta.INVITACION)
     assert _restablecer(client, token).status_code == 400
+
+
+def test_insistir_con_la_ip_bloqueada_no_alarga_el_bloqueo(client, buzon, hora):
+    for i in range(10):
+        _recuperar(client, f"n{i}@x.es")
+    for _ in range(20):
+        hora.avanzar(minutes=2)
+        _recuperar(client, "otro@x.es")
+    hora.avanzar(minutes=21)  # 61 min desde la decima peticion valida
+    assert _recuperar(client, "otro@x.es").status_code == 202
+
+
+def test_restablecer_anula_los_demas_enlaces_de_recuperacion(client, buzon, hora, db_session):
+    from app.services import tokens_cuenta
+
+    u = registrar(client, "ana@x.es")
+    otro = tokens_cuenta.emitir(db_session, u, tokens_cuenta.RECUPERACION)
+    # Un segundo enlace emitido a la vez (dos peticiones concurrentes) sin
+    # anular el primero: se simula volviendo a dejarlo sin usar.
+    from app.models import TokenCuenta
+    _recuperar(client, "ana@x.es")
+    db_session.query(TokenCuenta).update({TokenCuenta.usado_en: None})
+    db_session.commit()
+
+    assert _restablecer(client, buzon.token()).status_code == 204
+    assert _restablecer(client, otro, password="otra-clave-distinta").status_code == 400

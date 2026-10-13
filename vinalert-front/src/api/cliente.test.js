@@ -86,6 +86,31 @@ describe('cliente de API', () => {
   });
 });
 
+// Quien abre el enlace de "restablecer" casi siempre tiene un token viejo en
+// el navegador: /auth/me da 401, y mandarle a "tu sesion ha caducado" le
+// sacaria de la pantalla que necesita.
+describe('un 401 estando en una pantalla de acceso', () => {
+  afterEach(() => {
+    configurarSalidaDeSesion(null);
+  });
+
+  test.each(['/restablecer?token=abc', '/invitacion?token=abc', '/recuperar', '/login'])(
+    'en %s limpia el token pero no redirige',
+    async (ruta) => {
+      window.history.replaceState({}, '', ruta);
+      localStorage.setItem(LLAVE_TOKEN, 'caducado');
+      const espia = vi.fn();
+      configurarSalidaDeSesion(espia);
+      const alRechazar = cliente.interceptors.response.handlers[0].rejected;
+
+      await expect(alRechazar({ response: { status: 401 }, config: { url: '/auth/me' } })).rejects.toBeTruthy();
+
+      expect(localStorage.getItem(LLAVE_TOKEN)).toBeNull();
+      expect(espia).not.toHaveBeenCalled();
+    },
+  );
+});
+
 describe('destinoSeguro', () => {
   test.each([
     ['/p/1/estado', '/p/1/estado'],

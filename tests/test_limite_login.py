@@ -95,3 +95,18 @@ def test_se_registran_los_intentos(client, hora, db_session):
     _login(client, "ana@x.es", "clave12345")
     resultados = [i.resultado for i in db_session.query(IntentoAcceso).order_by(IntentoAcceso.id)]
     assert resultados == ["fallo", "exito"]
+
+
+def test_un_username_enorme_se_rechaza_sin_tocar_la_bd(client, hora, db_session):
+    resp = _login(client, "a" * 300_000 + "@x.es", "mala")
+    assert resp.status_code == 422
+    assert db_session.query(IntentoAcceso).count() == 0
+
+
+def test_insistir_bloqueado_no_llena_la_tabla(client, hora, db_session):
+    # Las peticiones rechazadas por el limite no se guardan: si no, cualquiera
+    # podria llenar el disco con peticiones que ya no cuentan para nada.
+    registrar(client, "ana@x.es")
+    for _ in range(30):
+        _login(client, "ana@x.es", "mala")
+    assert db_session.query(IntentoAcceso).count() == 5

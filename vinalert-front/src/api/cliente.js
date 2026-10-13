@@ -31,6 +31,15 @@ function esRutaDeAcceso(url = '') {
   return RUTAS_DE_ACCESO.some((r) => url === r || url.startsWith(`${r}/`) || url.startsWith(`${r}?`));
 }
 
+// Pantallas a las que se llega sin sesion. Si el navegador guardaba un token
+// viejo, se limpia en silencio: mandar a "tu sesion ha caducado" a quien abre
+// el enlace de restablecer le sacaria justo de la pantalla que necesita.
+const PANTALLAS_DE_ACCESO = ['/login', '/recuperar', '/restablecer', '/invitacion'];
+
+function enPantallaDeAcceso() {
+  return PANTALLAS_DE_ACCESO.includes(window.location.pathname);
+}
+
 let alPerderSesion = null;
 
 /**
@@ -65,6 +74,8 @@ cliente.interceptors.response.use(
       !esRutaDeAcceso(error.config?.url);
     if (caducada) {
       sesion.limpiar();
+    }
+    if (caducada && !enPantallaDeAcceso()) {
       const destino = window.location.pathname + window.location.search;
       if (alPerderSesion) {
         alPerderSesion({ motivo: MOTIVO_CADUCADA, destino });

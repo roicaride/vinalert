@@ -35,6 +35,15 @@ def _hash(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
+def anular(db: Session, usuario: Usuario, tipo: str) -> None:
+    """Deja sin efecto los enlaces vivos de ese tipo. No hace commit."""
+    db.query(TokenCuenta).filter(
+        TokenCuenta.usuario_id == usuario.id,
+        TokenCuenta.tipo == tipo,
+        TokenCuenta.usado_en.is_(None),
+    ).update({TokenCuenta.usado_en: reloj.ahora_utc()}, synchronize_session=False)
+
+
 def emitir(
     db: Session,
     usuario: Usuario,
@@ -43,11 +52,7 @@ def emitir(
     parcela: Optional[Parcela] = None,
 ) -> str:
     ahora = reloj.ahora_utc()
-    db.query(TokenCuenta).filter(
-        TokenCuenta.usuario_id == usuario.id,
-        TokenCuenta.tipo == tipo,
-        TokenCuenta.usado_en.is_(None),
-    ).update({TokenCuenta.usado_en: ahora}, synchronize_session=False)
+    anular(db, usuario, tipo)
 
     token = secrets.token_urlsafe(32)
     db.add(TokenCuenta(

@@ -192,3 +192,28 @@ def test_invitar_un_cliente_que_ya_existe_da_409(client, admin, buzon):
 def test_un_gestor_no_invita_clientes(client, auth_headers, buzon):
     resp = client.post("/admin/invitaciones", json={"email": "x@x.es", "nombre": "X"}, headers=auth_headers)
     assert resp.status_code == 403
+
+
+# --- Retirar a un invitado pendiente -----------------------------------------
+
+def test_retirar_a_un_pendiente_anula_su_invitacion(client, auth_headers, parcela_id, buzon, db_session):
+    # Un email mal escrito llega a un desconocido; el gestor lo ve y lo retira.
+    _invitar(client, auth_headers, parcela_id, "juan@gmial.com")
+    token = buzon.token()
+    uid = _uid(db_session, "juan@gmial.com")
+
+    assert client.delete(f"/parcelas/{parcela_id}/usuarios/{uid}", headers=auth_headers).status_code == 204
+
+    assert _aceptar(client, token).status_code == 400
+    assert db_session.query(Usuario).filter_by(email="juan@gmial.com").count() == 0
+
+
+def test_retirar_a_un_pendiente_que_tiene_otra_parcela_no_borra_su_cuenta(client, auth_headers, parcela_id, buzon, db_session):
+    otra = client.post("/parcelas/", json={"nombre": "Otra"}, headers=auth_headers).json()["id"]
+    _invitar(client, auth_headers, parcela_id, "nueva@x.es")
+    _invitar(client, auth_headers, otra, "nueva@x.es")
+    uid = _uid(db_session, "nueva@x.es")
+
+    client.delete(f"/parcelas/{parcela_id}/usuarios/{uid}", headers=auth_headers)
+
+    assert _aceptar(client, buzon.token()).status_code == 200

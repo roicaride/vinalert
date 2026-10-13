@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import ROL_GESTOR, get_current_user, parcela_con_gestion, parcela_con_lectura
-from ..models import ParcelaUsuario, Usuario
+from ..models import ParcelaUsuario, TokenCuenta, Usuario
 from ..schemas import MiembroCreate, MiembroResp, MiembroUpdate
 from ..services import tokens_cuenta
 
@@ -149,4 +149,14 @@ def retirar_miembro(
             status_code=409,
             detail="No puedes dejar la parcela sin ningun gestor: nombra a otro antes.",
         )
+
+    # Una invitacion retirada no puede seguir activando una cuenta: si el
+    # email estaba mal escrito, el enlace le habria llegado a un desconocido.
+    # Si la persona no ha aceptado y ya no tiene ninguna parcela, su cuenta
+    # pendiente desaparece con sus enlaces.
+    usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
+    sin_parcelas = db.query(ParcelaUsuario).filter(ParcelaUsuario.usuario_id == usuario_id).count() == 0
+    if usuario is not None and usuario.pendiente and sin_parcelas:
+        db.query(TokenCuenta).filter(TokenCuenta.usuario_id == usuario_id).delete(synchronize_session=False)
+        db.delete(usuario)
     db.commit()

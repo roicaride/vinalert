@@ -23,6 +23,9 @@ from ..services import limites, tokens_cuenta
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+LONGITUD_MAXIMA_EMAIL = 254
+
+
 def ip_cliente(request: Request) -> str:
     # Detras de un proxy, la API debe arrancarse con --proxy-headers para que
     # esto sea la IP real y no la del proxy (README, "Despliegue").
@@ -43,12 +46,17 @@ def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ) -> Any:
+    # Un email no pasa de 254 caracteres. Sin este tope, cualquiera podria
+    # guardar megas en intentos_acceso con cada peticion.
+    if len(form_data.username) > LONGITUD_MAXIMA_EMAIL:
+        raise HTTPException(status_code=422, detail="El email es demasiado largo.")
     email = limites.normalizar_email(form_data.username)
     ip = ip_cliente(request)
 
+    # Lo rechazado por el limite no se guarda: no cuenta para nada y
+    # guardarlo dejaria llenar la tabla sin autenticarse.
     minutos = limites.bloqueo_login(db, email, ip)
     if minutos is not None:
-        limites.registrar_intento(db, "login", email, ip, "bloqueado")
         raise _demasiados_intentos(minutos)
 
     user = db.query(Usuario).filter(func.lower(Usuario.email) == email).first()
@@ -106,7 +114,6 @@ def recuperar_password(
     """
     ip = ip_cliente(request)
     if limites.bloqueo_recuperacion_ip(db, ip):
-        limites.registrar_intento(db, "recuperacion", body.email, ip, "bloqueado")
         raise _demasiados_intentos(60)
 
     user = db.query(Usuario).filter(func.lower(Usuario.email) == body.email).first()
@@ -137,8 +144,10 @@ def restablecer_password(
 
     user.hashed_password = obtener_password_hash(body.password)
     # Cierra todas las sesiones abiertas: si alguien tenia la contrasena
-    # vieja, tambien tenia una sesion.
+    # vieja, tambien tenia una sesion. Y cualquier otro enlace de
+    # recuperacion que siguiera vivo.
     user.token_version += 1
+    tokens_cuenta.anular(db, user, tokens_cuenta.RECUPERACION)
     db.commit()
     limites.marcar_restablecimiento(db, user.email, ip_cliente(request))
     return Response(status_code=204)
@@ -229,7 +238,6 @@ def cambiar_password(
     ip = ip_cliente(request)
     minutos = limites.bloqueo_login(db, current_user.email, ip)
     if minutos is not None:
-        limites.registrar_intento(db, "login", current_user.email, ip, "bloqueado")
         raise _demasiados_intentos(minutos)
     if not verificar_password(body.actual, current_user.hashed_password):
         limites.registrar_intento(db, "login", current_user.email, ip, "fallo")
@@ -237,6 +245,9 @@ def cambiar_password(
 
     current_user.hashed_password = obtener_password_hash(body.nueva)
     current_user.token_version += 1
+    # Quien cambia la contraseña por si se la han robado espera que los
+    # enlaces de recuperacion que haya por ahi dejen de valer.
+    tokens_cuenta.anular(db, current_user, tokens_cuenta.RECUPERACION)
     db.commit()
     return Token(access_token=crear_token_sesion(current_user), token_type="bearer")
 

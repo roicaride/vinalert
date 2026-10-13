@@ -106,6 +106,7 @@ def bloqueo_recuperacion_ip(db: Session, ip: str) -> bool:
     n = db.query(IntentoAcceso).filter(
         IntentoAcceso.ip == ip,
         IntentoAcceso.tipo == "recuperacion",
+        IntentoAcceso.resultado != "bloqueado",
         IntentoAcceso.momento > desde,
     ).count()
     return n >= MAX_RECUPERACION_IP

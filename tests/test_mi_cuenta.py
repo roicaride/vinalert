@@ -97,3 +97,14 @@ def test_el_job_de_limpieza_queda_programado():
     scheduler = BackgroundScheduler()
     _programar_jobs(scheduler)
     assert scheduler.get_job("limpiar_accesos") is not None
+
+
+def test_cambiar_la_contrasena_anula_los_enlaces_de_recuperacion(client, buzon):
+    registrar(client, "ana@x.es")
+    client.post("/auth/recuperar", json={"email": "ana@x.es"})
+    enlace = buzon.token()
+    token = _entrar(client).json()["access_token"]
+    assert _cambiar(client, token, "clave12345").status_code == 200
+
+    resp = client.post("/auth/restablecer", json={"token": enlace, "password": "otra-clave-distinta"})
+    assert resp.status_code == 400
