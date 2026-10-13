@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import Annotated, Literal, Optional
+from typing import Annotated, List, Literal, Optional
 from zoneinfo import ZoneInfo
 
 from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict, EmailStr, Field
@@ -459,3 +459,80 @@ class DispositivoIoTResp(BaseModel):
     ultimo_uso: Optional[datetime] = None
     intervalo_ciclo_seg: int
 
+
+# ─── Panel de administracion: sistema y configuracion ───────────────────────
+
+class EstadoJobResp(BaseModel):
+    job_id: str
+    nombre: str
+    ultimo_inicio: Optional[datetime] = None
+    ultimo_fin: Optional[datetime] = None
+    ultimo_exito: Optional[datetime] = None
+    procesadas: Optional[int] = None
+    fallos: Optional[int] = None
+    ultimo_error: Optional[str] = None
+
+
+class DispositivoEstadoResp(BaseModel):
+    id: int
+    nombre: str
+    parcela_id: int
+    parcela: str
+    activo: bool
+    ultimo_uso: Optional[datetime] = None
+    intervalo_ciclo_seg: int
+    # Lleva mas de dos ciclos sin enviar. Uno que nunca ha enviado no cuenta:
+    # puede estar aun sin instalar.
+    sin_senal: bool
+
+
+class EstadoSistemaResp(BaseModel):
+    """Fechas de jobs en UTC; ultimo_uso de dispositivos y hora_servidor en hora de Madrid."""
+    hora_servidor: datetime
+    correo_configurado: bool
+    proveedor_clima: str
+    jobs: List[EstadoJobResp]
+    dispositivos: List[DispositivoEstadoResp]
+
+
+class IntentoAccesoResp(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    momento: datetime
+    tipo: str
+    email: str
+    ip: str
+    resultado: str
+
+
+_TextoConfig = Optional[Annotated[str, Field(max_length=500)]]
+
+
+class ConfiguracionPublica(BaseModel):
+    """Datos del titular (responsable del tratamiento) y del encargado. None = pendiente de rellenar."""
+    titular_nombre: Optional[str] = None
+    titular_nif: Optional[str] = None
+    titular_domicilio: Optional[str] = None
+    titular_email: Optional[str] = None
+    titular_telefono: Optional[str] = None
+    titular_registro: Optional[str] = None
+    encargado_nombre: Optional[str] = None
+    encargado_nif: Optional[str] = None
+    encargado_email: Optional[str] = None
+    proveedor_alojamiento: Optional[str] = None
+    proveedor_correo: Optional[str] = None
+
+
+class ConfiguracionUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    titular_nombre: _TextoConfig = None
+    titular_nif: _TextoConfig = None
+    titular_domicilio: _TextoConfig = None
+    titular_email: _TextoConfig = None
+    titular_telefono: _TextoConfig = None
+    titular_registro: _TextoConfig = None
+    encargado_nombre: _TextoConfig = None
+    encargado_nif: _TextoConfig = None
+    encargado_email: _TextoConfig = None
+    proveedor_alojamiento: _TextoConfig = None
+    proveedor_correo: _TextoConfig = None

@@ -43,30 +43,37 @@ def _consolidar_clima_ventana(parcela: Parcela, db: Session, dias: int = DIAS_VE
     return len(filas)
 
 
-def consolidar_parcela(parcela: Parcela, db: Session, dias: int = DIAS_VENTANA) -> None:
-    """Consolida el clima diario de una parcela; un fallo no sale de aqui."""
+def consolidar_parcela(parcela: Parcela, db: Session, dias: int = DIAS_VENTANA) -> bool:
+    """Consolida el clima diario de una parcela; un fallo no sale de aqui. True si fue bien."""
     try:
         _consolidar_clima_ventana(parcela, db, dias)
+        return True
     except Exception as e:
         db.rollback()
         logger.exception("Fallo consolidando el clima de la parcela %s: %s", parcela.id, e)
+        return False
 
 
-def consolidar_todas_parcelas(dias: int = DIAS_VENTANA) -> None:
+def consolidar_todas_parcelas(dias: int = DIAS_VENTANA) -> dict:
     """
     Punto de entrada del scheduler y del lanzador manual (`worker.py`), para
     que ambos hagan exactamente lo mismo. Aisla el fallo de cada parcela: una
     rota no puede dejar sin consolidar a las demas.
     """
     db: Session = SessionLocal()
+    fallos = 0
+    parcelas = []
     try:
         parcelas = db.query(Parcela).all()
         logger.info("Consolidando %s parcela(s), ventana de %s dias", len(parcelas), dias)
         for parcela in parcelas:
             try:
-                consolidar_parcela(parcela, db, dias)
+                if not consolidar_parcela(parcela, db, dias):
+                    fallos += 1
             except Exception as e:
+                fallos += 1
                 db.rollback()
                 logger.exception("Fallo consolidando la parcela %s: %s", parcela.id, e)
     finally:
         db.close()
+    return {"procesadas": len(parcelas), "fallos": fallos}

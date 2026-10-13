@@ -7,9 +7,14 @@ from .weather import fetch_y_guardar_clima
 logger = logging.getLogger(__name__)
 
 
-def refrescar_clima_todas_parcelas() -> None:
-    """Refresca el clima de todas las parcelas con coordenadas. Pensada para el scheduler."""
+def refrescar_clima_todas_parcelas() -> dict:
+    """
+    Refresca el clima de todas las parcelas con coordenadas. Pensada para el
+    scheduler; devuelve cuantas proceso y en cuantas fallo, para el panel.
+    """
     db = SessionLocal()
+    fallos = 0
+    parcelas = []
     try:
         parcelas = db.query(Parcela).filter(
             Parcela.latitud.isnot(None),
@@ -19,9 +24,12 @@ def refrescar_clima_todas_parcelas() -> None:
             try:
                 aviso = fetch_y_guardar_clima(parcela, db)
                 if aviso:
+                    fallos += 1
                     logger.warning("No se pudo actualizar clima de parcela %s: %s", parcela.id, aviso)
             except Exception as exc:
+                fallos += 1
                 db.rollback()
                 logger.exception("Fallo al refrescar clima de parcela %s: %s", parcela.id, exc)
     finally:
         db.close()
+    return {"procesadas": len(parcelas), "fallos": fallos}

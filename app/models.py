@@ -312,3 +312,26 @@ class IntentoAcceso(Base):
         Index("ix_intentos_acceso_email", "email", "tipo", "momento"),
         Index("ix_intentos_acceso_ip", "ip", "tipo", "momento"),
     )
+
+
+class EstadoJob(Base):
+    """Ultima ejecucion de cada trabajo periodico (ver services/estado_jobs.py). UTC sin zona."""
+    __tablename__ = "estado_jobs"
+    job_id = Column(String, primary_key=True)
+    ultimo_inicio = Column(DateTime, nullable=True)
+    ultimo_fin = Column(DateTime, nullable=True)
+    ultimo_exito = Column(DateTime, nullable=True)
+    procesadas = Column(Integer, nullable=True)
+    fallos = Column(Integer, nullable=True)
+    ultimo_error = Column(Text, nullable=True)
+
+
+class Configuracion(Base):
+    """
+    Ajustes que el superadmin edita desde el panel: hoy, los datos del titular
+    y del encargado que muestran las paginas legales. Clave-valor para que
+    anadir un dato no exija una migracion.
+    """
+    __tablename__ = "configuracion"
+    clave = Column(String, primary_key=True)
+    valor = Column(Text, nullable=True)

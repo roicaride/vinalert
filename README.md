@@ -263,6 +263,7 @@ psql "$DATABASE_URL" -f migracion_2026_09_18_quitar_riego.sql
 psql "$DATABASE_URL" -f migracion_2026_09_19_suelo_por_sensor.sql
 psql "$DATABASE_URL" -f migracion_2026_10_13_superadmin.sql
 psql "$DATABASE_URL" -f migracion_2026_10_13_cuentas.sql
+psql "$DATABASE_URL" -f migracion_2026_10_13_admin.sql
 ```
 
 Back up the database before applying migrations to a production instance.
@@ -316,6 +317,13 @@ is the plot id.
 | `POST` | `/auth/cerrar-sesiones` | Sign out everywhere. |
 | `GET` | `/admin/usuarios` | Every account with its sign-up date and plot count. Superadmin only. |
 | `POST` | `/admin/invitaciones` | Invite a new client (an account with no plots). Superadmin only. |
+| `PATCH` | `/admin/usuarios/{user_id}` | Deactivate/reactivate, grant or remove superadmin and access to every plot. |
+| `DELETE` | `/admin/usuarios/{user_id}` | Erase an account's personal data (GDPR). Plots, readings and treatments stay. |
+| `POST` | `/admin/usuarios/{user_id}/restablecer` | Email that person a password reset link (or their invitation). |
+| `GET` | `/admin/estado` | Last run of each scheduled job, mail configuration and every device with its last report. |
+| `GET` | `/admin/accesos` | Login and recovery attempts, newest first; filter by `email` and `resultado`. |
+| `PUT` | `/admin/configuracion` | Owner and processor details shown on the legal pages. |
+| `GET` | `/configuracion/publica` | Those details, public (no token). |
 
 ### Plots
 

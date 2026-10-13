@@ -9,9 +9,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import Base, SessionLocal, engine
-from .routers import admin, auth, clima_fetch, dispositivos, foliar, logs, miembros, parcelas, sensores, tratamientos
+from .routers import admin, auth, clima_fetch, configuracion, dispositivos, foliar, logs, miembros, parcelas, sensores, tratamientos
 from .services.clima_scheduler import refrescar_clima_todas_parcelas
-from .services import correo, limites
+from .services import correo, estado_jobs, limites
 from .services.consolidacion import consolidar_todas_parcelas
 
 load_dotenv()
@@ -28,7 +28,7 @@ def _programar_jobs(scheduler_: BackgroundScheduler) -> None:
     """
     intervalo_horas = int(os.getenv("CLIMA_INTERVALO_HORAS", "3"))
     scheduler_.add_job(
-        refrescar_clima_todas_parcelas,
+        _job_refrescar_clima,
         "interval",
         hours=intervalo_horas,
         next_run_time=datetime.now(timezone.utc),
@@ -45,7 +45,7 @@ def _programar_jobs(scheduler_: BackgroundScheduler) -> None:
     # rehace la ventana de DIAS_VENTANA dias (upsert), asi que repetirla no
     # duplica nada: pone al dia lo que faltase y refresca el dia en curso.
     scheduler_.add_job(
-        consolidar_todas_parcelas,
+        _job_consolidar,
         "interval",
         hours=1,
         next_run_time=datetime.now(timezone.utc),
@@ -57,7 +57,7 @@ def _programar_jobs(scheduler_: BackgroundScheduler) -> None:
 
     # Registros de acceso de mas de 90 dias y enlaces de cuenta caducados.
     scheduler_.add_job(
-        _limpiar_accesos,
+        _job_limpiar_accesos,
         "interval",
         hours=24,
         coalesce=True,
@@ -72,6 +72,19 @@ def _limpiar_accesos() -> None:
         limites.limpiar_antiguos(db)
     finally:
         db.close()
+
+
+# Cada job pasa por estado_jobs para que el panel sepa cuando corrio y como.
+def _job_refrescar_clima() -> None:
+    estado_jobs.ejecutar("refrescar_clima", refrescar_clima_todas_parcelas)
+
+
+def _job_consolidar() -> None:
+    estado_jobs.ejecutar("consolidar_diario", consolidar_todas_parcelas)
+
+
+def _job_limpiar_accesos() -> None:
+    estado_jobs.ejecutar("limpiar_accesos", _limpiar_accesos)
 
 
 
@@ -107,4 +120,5 @@ app.include_router(tratamientos.router)
 app.include_router(miembros.router)
 app.include_router(dispositivos.router)
 app.include_router(admin.router)
+app.include_router(configuracion.router)
 

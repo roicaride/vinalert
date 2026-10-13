@@ -1,14 +1,25 @@
-from typing import Any, List
+from datetime import datetime, timedelta
+from typing import Any, List, Optional
+from zoneinfo import ZoneInfo
+import os
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response
-from sqlalchemy import func
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import ROL_ADMIN, ROL_GESTOR, require_superadmin
-from ..models import IntentoAcceso, Parcela, ParcelaUsuario, TokenCuenta, Usuario
-from ..schemas import CuentaAdminUpdate, InvitacionAdminCreate, UsuarioAdminResp
-from ..services import reloj, tokens_cuenta
+from ..models import DispositivoIoT, EstadoJob, IntentoAcceso, Parcela, ParcelaUsuario, TokenCuenta, Usuario
+from ..schemas import (
+    CuentaAdminUpdate,
+    DispositivoEstadoResp,
+    EstadoJobResp,
+    EstadoSistemaResp,
+    IntentoAccesoResp,
+    InvitacionAdminCreate,
+    UsuarioAdminResp,
+)
+from ..services import estado_jobs, limites, reloj, tokens_cuenta
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -199,3 +210,79 @@ def enviar_restablecer(
     else:
         tokens_cuenta.enviar_recuperacion_a(db, u, background)
     return {"detail": f"Enlace enviado a {u.email}."}
+
+
+@router.get("/estado", response_model=EstadoSistemaResp)
+def estado_del_sistema(
+    _admin: Usuario = Depends(require_superadmin),
+    db: Session = Depends(get_db),
+) -> Any:
+    """Lo que antes solo se sabia mirando los logs: si los jobs corren y que aparatos se han callado."""
+    guardados = {e.job_id: e for e in db.query(EstadoJob).all()}
+    jobs = []
+    for job_id in sorted(set(estado_jobs.JOBS_CONOCIDOS) | set(guardados)):
+        e = guardados.get(job_id)
+        jobs.append(EstadoJobResp(
+            job_id=job_id,
+            nombre=estado_jobs.JOBS_CONOCIDOS.get(job_id, job_id),
+            ultimo_inicio=e.ultimo_inicio if e else None,
+            ultimo_fin=e.ultimo_fin if e else None,
+            ultimo_exito=e.ultimo_exito if e else None,
+            procesadas=e.procesadas if e else None,
+            fallos=e.fallos if e else None,
+            ultimo_error=e.ultimo_error if e else None,
+        ))
+
+    # ultimo_uso se guarda en UTC sin zona (deps._dispositivo_del_token).
+    ahora_utc = reloj.ahora_utc()
+    dispositivos = []
+    filas = (
+        db.query(DispositivoIoT, Parcela.nombre)
+        .join(Parcela, Parcela.id == DispositivoIoT.parcela_id)
+        .order_by(Parcela.nombre, DispositivoIoT.nombre)
+        .all()
+    )
+    for d, parcela in filas:
+        sin_senal = (
+            d.activo
+            and d.ultimo_uso is not None
+            and ahora_utc - d.ultimo_uso > timedelta(seconds=2 * d.intervalo_ciclo_seg)
+        )
+        dispositivos.append(DispositivoEstadoResp(
+            id=d.id, nombre=d.nombre, parcela_id=d.parcela_id, parcela=parcela, activo=d.activo,
+            ultimo_uso=d.ultimo_uso, intervalo_ciclo_seg=d.intervalo_ciclo_seg, sin_senal=bool(sin_senal),
+        ))
+
+    return EstadoSistemaResp(
+        hora_servidor=datetime.now(ZoneInfo("Europe/Madrid")).replace(tzinfo=None),
+        correo_configurado=bool(os.getenv("SMTP_HOST")),
+        proveedor_clima=os.getenv("WEATHER_PROVIDER", "open_meteo"),
+        jobs=jobs,
+        dispositivos=dispositivos,
+    )
+
+
+@router.get("/accesos", response_model=List[IntentoAccesoResp])
+def registro_de_accesos(
+    email: Optional[str] = Query(None, max_length=254),
+    resultado: Optional[str] = Query(None, pattern="^(exito|fallo|bloqueado)$"),
+    antes_de: Optional[int] = Query(None, ge=1, description="id del ultimo de la pagina anterior"),
+    limite: int = Query(100, ge=1, le=500),
+    _admin: Usuario = Depends(require_superadmin),
+    db: Session = Depends(get_db),
+) -> Any:
+    """Intentos de login y de recuperacion, del mas reciente al mas antiguo (se guardan 90 dias)."""
+    q = db.query(IntentoAcceso)
+    if email:
+        q = q.filter(IntentoAcceso.email == limites.normalizar_email(email))
+    if resultado:
+        q = q.filter(IntentoAcceso.resultado == resultado)
+    if antes_de:
+        # Cursor (momento, id): estable aunque dos intentos compartan instante.
+        ref = db.get(IntentoAcceso, antes_de)
+        if ref is not None:
+            q = q.filter(or_(
+                IntentoAcceso.momento < ref.momento,
+                and_(IntentoAcceso.momento == ref.momento, IntentoAcceso.id < ref.id),
+            ))
+    return q.order_by(IntentoAcceso.momento.desc(), IntentoAcceso.id.desc()).limit(limite).all()
