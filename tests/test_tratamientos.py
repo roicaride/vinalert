@@ -95,3 +95,28 @@ def test_no_se_puede_borrar_un_tratamiento_de_otro_usuario(client, auth_headers,
 
     resp = client.delete(f"/tratamientos/{creado['id']}", headers=otros_headers)
     assert resp.status_code == 404
+
+
+def test_fecha_en_utc_de_la_web_se_guarda_en_hora_de_madrid(client, auth_headers, parcela_id, db_session):
+    """
+    La web manda la fecha con toISOString(), en UTC y con 'Z'. Antes eso
+    llegaba como datetime con zona y, en cuanto la parcela tenia clima
+    guardado (sin zona), restarlos daba TypeError: el tratamiento no se podia
+    registrar. 07:30Z en agosto son las 09:30 en Madrid (CEST).
+    """
+    db_session.add(LogClima(
+        parcela_id=parcela_id, fecha_hora=datetime(2026, 8, 17, 9, 0),
+        temp_c=22.0, viento_vel_ms=1.8,
+    ))
+    db_session.commit()
+
+    resp = client.post(
+        "/tratamientos/",
+        json={**_cuerpo(parcela_id), "fecha": "2026-08-17T07:30:00.000Z"},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    assert body["fecha"].startswith("2026-08-17T09:30:00")
+    assert body["clima_fuente"] == "log_clima"
+    assert body["temp_c_aplicacion"] == 22.0

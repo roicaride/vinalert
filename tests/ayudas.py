@@ -24,3 +24,16 @@ def alta_sensor(client, headers, parcela_id, etiqueta=None):
         assert resp.status_code == 200, resp.text
         sensor = resp.json()
     return sensor
+
+
+def hacer_superadmin(db_session, email):
+    """
+    Marca la cuenta como superadmin directamente en la BD, que es la unica
+    forma de serlo (ni el registro ni ningun endpoint pueden darlo).
+    """
+    from app.models import Usuario
+
+    u = db_session.query(Usuario).filter_by(email=email).one()
+    u.es_superadmin = True
+    db_session.commit()
+    return u

@@ -1,3 +1,10 @@
+import os
+
+# app.auth exige SECRET_KEY al importarse. Se fija antes de importar la app
+# para que los tests no dependan de tener un .env (en CI no lo hay); si el .env
+# existe, load_dotenv no pisa este valor.
+os.environ.setdefault("SECRET_KEY", "clave-solo-para-tests-" + "x" * 32)
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker

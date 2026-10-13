@@ -3,6 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 import { Marbete } from '../ui/Estados';
+import { APAGADO, BROTE, LOUSA, MONO, OSO, escaparHtml, fichaNodo, nombreNodo } from './mapaFichas';
 
 /**
  * El campo, visto desde arriba.
@@ -15,12 +16,6 @@ import { Marbete } from '../ui/Estados';
  * BROTE para el nodo que reporta, gris para el que esta caido: el mismo codigo
  * de tinta que en el resto de la aplicacion.
  */
-
-const LOUSA = '#222a2e';
-const OSO = '#efede6';
-const BROTE = '#8fc93a';
-const APAGADO = '#565e60';
-const LINEA = '#3b4144';
 
 const CAPAS = {
   satelite: {
@@ -43,8 +38,6 @@ const CAPAS = {
   },
 };
 
-const MONO = "'IBM Plex Mono', ui-monospace, monospace";
-
 function iconoNodo(numero, activo) {
   const tinta = activo ? BROTE : APAGADO;
   const texto = activo ? LOUSA : OSO;
@@ -52,7 +45,7 @@ function iconoNodo(numero, activo) {
     className: '',
     html: `<div style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;
       background:${tinta};color:${texto};border:1px solid ${LOUSA};
-      font-family:${MONO};font-weight:600;font-size:11px;line-height:1;cursor:pointer;">${numero}</div>`,
+      font-family:${MONO};font-weight:600;font-size:11px;line-height:1;cursor:pointer;">${escaparHtml(numero)}</div>`,
     iconSize: [24, 24],
     iconAnchor: [12, 12],
     popupAnchor: [0, -14],
@@ -72,27 +65,6 @@ function iconoParcela() {
     iconAnchor: [13, 13],
     popupAnchor: [0, -15],
   });
-}
-
-function fichaNodo(s) {
-  const linea = (etiqueta, valor) =>
-    `<tr><td style="padding:2px 12px 2px 0;color:#9d9f9c;font-size:9px;letter-spacing:.14em;text-transform:uppercase;">${etiqueta}</td>
-      <td style="padding:2px 0;color:${OSO};text-align:right;">${valor}</td></tr>`;
-
-  return `<div style="font-family:${MONO};font-size:11px;color:${OSO};min-width:180px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:6px;border-bottom:1px solid ${LINEA};">
-      <span style="font-weight:600;">${s.etiqueta || `Sensor ${s.numero}`}</span>
-      <span style="font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:${s.activo ? BROTE : '#9d9f9c'};">
-        ${s.activo ? 'Activo' : 'Inactivo'}
-      </span>
-    </div>
-    <table style="width:100%;margin-top:6px;border-collapse:collapse;">
-      ${linea('Nº', s.numero)}
-      ${s.profundidad_cm ? linea('Profundidad', `${s.profundidad_cm} cm`) : ''}
-      ${s.modelo ? linea('Modelo', s.modelo) : ''}
-      ${linea('Coordenadas', `${s.latitud.toFixed(5)}, ${s.longitud.toFixed(5)}`)}
-    </table>
-  </div>`;
 }
 
 export default function MapaSensores({ parcela, sensores = [] }) {
@@ -139,13 +111,13 @@ export default function MapaSensores({ parcela, sensores = [] }) {
     if (parcelaTieneCoord) {
       L.marker([parcela.latitud, parcela.longitud], { icon: iconoParcela(), zIndexOffset: -100 })
         .addTo(mapa)
-        .bindTooltip(parcela.nombre, { direction: 'top', offset: [0, -14] });
+        .bindTooltip(escaparHtml(parcela.nombre), { direction: 'top', offset: [0, -14] });
     }
 
     conCoord.forEach((s) => {
       L.marker([s.latitud, s.longitud], { icon: iconoNodo(s.numero, s.activo) })
         .addTo(mapa)
-        .bindTooltip(`${s.etiqueta || `Sensor ${s.numero}`}`, { direction: 'top', offset: [0, -14] })
+        .bindTooltip(escaparHtml(nombreNodo(s)), { direction: 'top', offset: [0, -14] })
         .bindPopup(fichaNodo(s));
       limites.extend([s.latitud, s.longitud]);
     });

@@ -8,6 +8,7 @@ dispositivos ESP32, y nunca devuelve la huella de la contrasena.
 from datetime import datetime, timedelta
 
 from app.models import Parcela, ParcelaUsuario, Usuario
+from tests.ayudas import hacer_superadmin
 
 
 def _registrar(client, email, nombre="Persona", password="clave12345"):
@@ -19,8 +20,9 @@ def _token(client, email, password="clave12345"):
     return {"Authorization": f"Bearer {resp.json()['access_token']}"}
 
 
-def _admin(client):
+def _admin(client, db_session):
     _registrar(client, "admin@vinalert.dev", nombre="Admin")
+    hacer_superadmin(db_session, "admin@vinalert.dev")
     return _token(client, "admin@vinalert.dev")
 
 
@@ -80,8 +82,8 @@ def test_el_login_sigue_funcionando_para_cuentas_antiguas_con_mayusculas(client,
 # /auth/me
 # ---------------------------------------------------------------------------
 
-def test_me_dice_si_eres_el_superadmin(client):
-    admin = _admin(client)
+def test_me_dice_si_eres_el_superadmin(client, db_session):
+    admin = _admin(client, db_session)
     _registrar(client, "normal@vinalert.dev")
     normal = _token(client, "normal@vinalert.dev")
 
@@ -103,7 +105,7 @@ def test_un_usuario_normal_no_ve_el_listado(client):
 
 
 def test_el_admin_ve_todas_las_cuentas_con_sus_parcelas(client, db_session):
-    admin = _admin(client)
+    admin = _admin(client, db_session)
     _registrar(client, "ana@vinalert.dev", nombre="Ana")
     _registrar(client, "luis@vinalert.dev", nombre="Luis")
 
@@ -127,15 +129,18 @@ def test_el_admin_ve_todas_las_cuentas_con_sus_parcelas(client, db_session):
     assert por_email["ana@vinalert.dev"]["creado_en"] is not None
 
 
-def test_el_listado_nunca_expone_la_contrasena(client):
-    cuerpo = client.get("/admin/usuarios", headers=_admin(client)).json()
+def test_el_listado_nunca_expone_la_contrasena(client, db_session):
+    resp = client.get("/admin/usuarios", headers=_admin(client, db_session))
+    assert resp.status_code == 200
+    cuerpo = resp.json()
+    assert cuerpo
     for u in cuerpo:
         assert "hashed_password" not in u
         assert "password" not in u
 
 
 def test_el_listado_va_de_la_alta_mas_reciente_a_la_mas_antigua(client, db_session):
-    admin = _admin(client)
+    admin = _admin(client, db_session)
     _registrar(client, "primera@vinalert.dev")
     _registrar(client, "segunda@vinalert.dev")
     # Una cuenta anterior a que existiera la fecha de alta: va al final.

@@ -154,17 +154,18 @@ necesitan reflasheo. Adoptan el `cycleSeconds` de cada beacon, como ya hacían.
   beacon y otro de espera de su turno de sondeo; si cualquiera expira,
   el esclavo vuelve a dormir en vez de quedarse escuchando indefinidamente
   (para no agotar la batería).
-- **Backend por ngrok**: `httpPostJson()` usa `WiFiClientSecure` con
-  `setInsecure()` (no valida el certificado TLS de ngrok) y añade la
-  cabecera `ngrok-skip-browser-warning`, sin la cual ngrok responde con su
-  página HTML de aviso en vez de reenviar la petición al backend.
-- **Hora en las lecturas**: el campo `fecha_hora` va en hora **local**, no
-  UTC (así lo espera el backend), usando `GMT_OFFSET_SEC`/
-  `DAYLIGHT_OFFSET_SEC` (+1h base, +1h más asumiendo siempre horario de
-  verano). Esto no distingue invierno/verano — si el backend lo corrige
-  más adelante, hay que ajustar esas dos constantes a la vez. El epoch UTC
-  interno (`rtcEpoch`, usado solo para el protocolo LoRa) es independiente
-  de este offset y no se ve afectado.
+- **TLS**: `httpPostJson()` usa `WiFiClientSecure`. Si `secrets.h` define
+  `SERVER_ROOT_CA` (el certificado raíz de quien firma el HTTPS del backend;
+  con Let's Encrypt, ISRG Root X1), se valida el certificado del servidor.
+  Si no, se acepta cualquiera (`setInsecure()`) y la compilación lo avisa:
+  vale para desarrollo con ngrok, **nunca en producción**, porque cualquiera
+  con un punto de acceso con el mismo SSID se quedaría con el token. Se
+  añade además la cabecera `ngrok-skip-browser-warning`, sin la cual ngrok
+  responde con su página HTML de aviso.
+- **Hora en las lecturas**: el campo `fecha_hora` va en **UTC** con `Z`
+  (`2026-10-25T08:00:00Z`) y el backend la convierte a hora de Madrid, con
+  los cambios de hora incluidos. Requiere un backend que convierta fechas
+  con zona: actualizar el backend antes que el firmware.
 - **Diagnóstico**: el voltaje de batería de cada esclavo viaja en cada una
   de sus lecturas subidas (campo `bateria`); el del propio maestro solo se
   muestra en pantalla/Serial, el backend actual no tiene un campo para él.

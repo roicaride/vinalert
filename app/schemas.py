@@ -1,7 +1,25 @@
 from datetime import date, datetime
-from typing import Literal, Optional
+from typing import Annotated, Literal, Optional
+from zoneinfo import ZoneInfo
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field, field_validator
+
+_TZ_MADRID = ZoneInfo("Europe/Madrid")
+
+
+def _a_hora_madrid_sin_zona(valor: datetime) -> datetime:
+    """
+    La BD guarda hora de Madrid sin zona. Una fecha que llega con zona (la web
+    manda toISOString(), en UTC con 'Z') se pasa a Madrid y se le quita la
+    zona; si no, compararla con las de la BD lanza TypeError y, guardada tal
+    cual, quedaria corrida una o dos horas. Sin zona se asume ya en Madrid.
+    """
+    if valor.tzinfo is None:
+        return valor
+    return valor.astimezone(_TZ_MADRID).replace(tzinfo=None)
+
+
+FechaHoraMadrid = Annotated[datetime, AfterValidator(_a_hora_madrid_sin_zona)]
 
 
 # ─── Inputs ──────────────────────────────────────────────────────────────────
@@ -9,7 +27,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 class LogSensorCreate(BaseModel):
     parcela_id: int
     sensor_id: int
-    fecha_hora: datetime
+    fecha_hora: FechaHoraMadrid
     humedad_suelo_pct: Optional[float] = Field(None, ge=0, le=100)
     temperatura_suelo: Optional[float] = None
     bateria: Optional[float] = Field(None, ge=0, le=100)
@@ -204,7 +222,7 @@ class LogClimaResp(BaseModel):
 
 class TratamientoCreate(BaseModel):
     parcela_id: int
-    fecha: datetime
+    fecha: FechaHoraMadrid
     tipo: str
     producto: Optional[str] = None
     materia_activa: Optional[str] = None

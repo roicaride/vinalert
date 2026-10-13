@@ -19,12 +19,10 @@ bool httpGetCycleSeconds(const String &url, const String &apiKey, uint32_t &outS
 // Sincroniza la hora por NTP (requiere WiFi ya conectado); bloquea hasta
 // lograrlo o agotar el timeout.
 bool ntpSync(uint32_t timeoutMs);
-// Epoch UTC real, valido tras ntpSync() (independiente de GMT_OFFSET_SEC).
+// Epoch UTC real, valido tras ntpSync().
 uint32_t nowEpochUtc();
-// "YYYY-MM-DDTHH:MM:SS" en hora local, valido tras ntpSync().
-String nowLocalIso();
-// Igual que nowLocalIso() pero a partir de un epoch UTC ya conocido, sin
-// necesitar NTP en vivo (fallback si la sincronizacion de este ciclo falla).
-String epochToLocalIso(uint32_t epoch);
+// "YYYY-MM-DDTHH:MM:SSZ" (UTC) a partir de un epoch. Sirve igual con la hora
+// recien sincronizada que con la estimada sin NTP.
+String epochToIsoUtc(uint32_t epoch);
 
 #endif // HTTP_UPLOAD_H

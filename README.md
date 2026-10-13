@@ -214,7 +214,7 @@ Backend variables, read from `.env`:
 | `SECRET_KEY` | Yes | — | JWT signing key. Generate with `openssl rand -hex 32`. |
 | `CORS_ORIGINS` | No | `http://localhost:5173` | Comma-separated list of allowed origins. |
 | `CLIMA_INTERVALO_HORAS` | No | `3` | Hours between weather refreshes. |
-| `WEATHER_PROVIDER` | No | `open-meteo` | Weather provider key. |
+| `WEATHER_PROVIDER` | No | `open_meteo` | Weather provider key. |
 
 Frontend variables, read from `vinalert-front/.env`:
 
@@ -247,9 +247,38 @@ psql "$DATABASE_URL" -f migracion_2026_08_22_intervalo_dispositivo.sql
 psql "$DATABASE_URL" -f migracion_2026_09_18_usuarios_alta.sql
 psql "$DATABASE_URL" -f migracion_2026_09_18_quitar_riego.sql
 psql "$DATABASE_URL" -f migracion_2026_09_19_suelo_por_sensor.sql
+psql "$DATABASE_URL" -f migracion_2026_10_13_superadmin.sql
 ```
 
 Back up the database before applying migrations to a production instance.
+
+`migracion_2026_10_13_superadmin.sql` marks `admin@vinalert.dev` as the superadmin. If your
+administrator account uses a different email, edit the `UPDATE` before running it — the
+superadmin is no longer derived from the email, so otherwise nobody can reach the admin
+screens.
+
+## Backups
+
+`scripts/backup_db.sh` dumps the database with `pg_dump` (custom format), checks the dump
+is readable, and deletes local copies older than `BACKUP_RETENCION_DIAS` (default 30). Set
+`BACKUP_REMOTO` to an [rclone](https://rclone.org) destination to also copy each dump off
+the machine — a backup on the same disk as the database does not survive that disk. Run it
+daily, for example from cron:
+
+```cron
+30 3 * * * cd /opt/vinalert && BACKUP_REMOTO=b2:vinalert-backups ./scripts/backup_db.sh >> /var/log/vinalert-backup.log 2>&1
+```
+
+To restore a dump into an empty database:
+
+```bash
+createdb vinalert_restaurada
+pg_restore --no-owner --dbname=postgresql://user:password@localhost:5432/vinalert_restaurada backups/vinalert_<fecha>.dump
+```
+
+Restore into a new database and check it before pointing the app at it. Rehearse a restore
+periodically: an untested backup is not a backup. The treatment log (`tratamientos`) must be
+kept for three years.
 
 ## API reference
 

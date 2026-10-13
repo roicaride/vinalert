@@ -1,12 +1,12 @@
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, Union
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..deps import get_current_user, parcela_con_gestion
-from ..models import LogClima, LogSensor, Sensor, Usuario
+from ..deps import get_emisor_lecturas, parcela_con_gestion
+from ..models import DispositivoIoT, LogClima, LogSensor, Sensor, Usuario
 from ..schemas import LogSensorCreate, LogSensorResp
 from ..services.weather import TZ_LOCAL, fetch_y_guardar_clima
 
@@ -17,10 +17,16 @@ router = APIRouter(prefix="/logs", tags=["logs"])
 @router.post("/sensor/", response_model=LogSensorResp, status_code=201)
 def crear_log_sensor(
     body: LogSensorCreate,
-    current_user: Usuario = Depends(get_current_user),
+    emisor: Union[Usuario, DispositivoIoT] = Depends(get_emisor_lecturas),
     db: Session = Depends(get_db),
 ) -> Any:
-    parcela_con_gestion(body.parcela_id, current_user, db)
+    if isinstance(emisor, DispositivoIoT):
+        # Un ESP32 solo escribe en la parcela a la que se dio de alta, diga
+        # lo que diga el cuerpo. 404 igual que para una parcela ajena.
+        if body.parcela_id != emisor.parcela_id:
+            raise HTTPException(status_code=404, detail="Parcela no encontrada")
+    else:
+        parcela_con_gestion(body.parcela_id, emisor, db)
 
     sensor = db.query(Sensor).filter(Sensor.id == body.sensor_id).first()
     if sensor is None or sensor.parcela_id != body.parcela_id:

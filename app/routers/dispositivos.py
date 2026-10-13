@@ -59,8 +59,10 @@ def crear_dispositivo(
     db.flush()
 
     # 2. Generar el JWT firmado incluyendo el device_id para permitir revocación
+    # sub identifica al aparato, no al admin que lo da de alta: el token va
+    # grabado en un ESP32 que esta en el campo y no puede valer como sesion.
     payload = {
-        "sub": str(current_user.id),
+        "sub": f"dispositivo:{dispositivo.id}",
         "device_id": dispositivo.id,
         "parcela_id": parcela_id,
         "tipo": "dispositivo_iot",

@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from app.models import Parcela, Usuario
-from tests.ayudas import alta_sensor
+from tests.ayudas import alta_sensor, hacer_superadmin
 
 
 def _crear_admin(client, db_session):
@@ -9,6 +9,7 @@ def _crear_admin(client, db_session):
     u = db_session.query(Usuario).filter_by(email="admin@vinalert.dev").first()
     u.rol = "admin"
     db_session.commit()
+    hacer_superadmin(db_session, "admin@vinalert.dev")
     resp = client.post("/auth/token", data={"username": "admin@vinalert.dev", "password": "clave12345"})
     token = resp.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
@@ -16,10 +17,9 @@ def _crear_admin(client, db_session):
 
 
 def test_dispositivos_restringido_a_admin_vinalert(client, auth_headers, db_session, parcela_id):
-    # Usuario regular (no admin@vinalert.dev) intenta acceder a dispositivos -> 403
+    # Usuario regular (no superadmin) intenta acceder a dispositivos -> 403
     resp = client.get(f"/parcelas/{parcela_id}/dispositivos", headers=auth_headers)
     assert resp.status_code == 403
-    assert "admin@vinalert.dev" in resp.json()["detail"]
 
     resp_post = client.post(
         f"/parcelas/{parcela_id}/dispositivos",

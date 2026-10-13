@@ -19,6 +19,10 @@ class Usuario(Base):
     telefono = Column(String)
     hashed_password = Column(String, nullable=False)
     rol = Column(String, default="agricultor")
+    # Administrador del sistema (listado de cuentas, dispositivos ESP32). Solo
+    # se da a mano en la BD o con semilla_inicial.py: ningun endpoint lo
+    # concede. Antes se deducia del email, y el registro es publico.
+    es_superadmin = Column(Boolean, nullable=False, default=False, server_default="false")
     # Cuando se dio de alta. Nula en las cuentas anteriores a la migracion
     # 2026-09-18: esa fecha no se guardaba y no se puede reconstruir.
     creado_en = Column(DateTime, default=_ahora_madrid)

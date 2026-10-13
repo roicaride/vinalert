@@ -19,6 +19,22 @@ bool wifiConnect(uint32_t timeoutMs) {
   return connected;
 }
 
+// Con SERVER_ROOT_CA definido en secrets.h se valida el certificado del
+// servidor: sin eso, cualquiera con un punto de acceso con el mismo SSID puede
+// hacerse pasar por el backend y quedarse con el token del dispositivo.
+// Sin el, se acepta cualquier certificado (solo vale para desarrollo con ngrok).
+#ifndef SERVER_ROOT_CA
+#warning "SERVER_ROOT_CA no definido en secrets.h: el certificado del servidor NO se valida. No usar asi en produccion."
+#endif
+
+static void configurarTls(WiFiClientSecure &client) {
+#ifdef SERVER_ROOT_CA
+  client.setCACert(SERVER_ROOT_CA);
+#else
+  client.setInsecure();
+#endif
+}
+
 void wifiDisconnect() {
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
@@ -31,7 +47,7 @@ bool httpPostJson(const String &url, const String &apiKey, const String &jsonBod
   }
 
   WiFiClientSecure client;
-  client.setInsecure(); // el backend esta detras de un tunel ngrok; no se fija el certificado
+  configurarTls(client);
 
   HTTPClient http;
   http.begin(client, url);
@@ -56,7 +72,7 @@ bool httpGetCycleSeconds(const String &url, const String &apiKey, uint32_t &outS
   if (WiFi.status() != WL_CONNECTED) return false;
 
   WiFiClientSecure client;
-  client.setInsecure();
+  configurarTls(client);
 
   HTTPClient http;
   http.begin(client, url);
@@ -97,7 +113,9 @@ bool httpGetCycleSeconds(const String &url, const String &apiKey, uint32_t &outS
 }
 
 bool ntpSync(uint32_t timeoutMs) {
-  configTime(GMT_OFFSET_SEC, DAYLIGHT_OFFSET_SEC, NTP_SERVER);
+  // Sin offset: el reloj va en UTC y las lecturas salen con 'Z'. El backend
+  // las pasa a hora de Madrid, cambios de hora incluidos.
+  configTime(0, 0, NTP_SERVER);
 
   time_t now = 0;
   uint32_t start = millis();
@@ -117,25 +135,15 @@ bool ntpSync(uint32_t timeoutMs) {
 }
 
 uint32_t nowEpochUtc() {
-  // time() devuelve epoch UTC real; el offset configurado en configTime()
-  // solo afecta a getLocalTime()/localtime(), no a este valor.
   time_t now;
   time(&now);
   return (uint32_t)now;
 }
 
-String nowLocalIso() {
-  struct tm timeinfo;
-  if (!getLocalTime(&timeinfo)) return "";
+String epochToIsoUtc(uint32_t epoch) {
+  time_t t = (time_t)epoch;
+  struct tm *timeinfo = gmtime(&t);
   char buffer[25];
-  strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%S", &timeinfo);
-  return String(buffer);
-}
-
-String epochToLocalIso(uint32_t epoch) {
-  time_t t = (time_t)epoch + GMT_OFFSET_SEC + DAYLIGHT_OFFSET_SEC;
-  struct tm *timeinfo = gmtime(&t); // gmtime porque el offset ya se sumo a mano arriba
-  char buffer[25];
-  strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%S", timeinfo);
+  strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", timeinfo);
   return String(buffer);
 }

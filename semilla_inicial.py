@@ -55,6 +55,7 @@ def sembrar():
                 email=ADMIN_EMAIL,
                 hashed_password=obtener_password_hash(ADMIN_PASSWORD),
                 rol="admin",
+                es_superadmin=True,
             )
             db.add(admin)
             print(f"   -> Creado admin: {ADMIN_EMAIL}")

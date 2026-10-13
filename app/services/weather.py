@@ -291,7 +291,9 @@ def get_provider() -> WeatherProvider:
     Devuelve la instancia del proveedor configurado en WEATHER_PROVIDER (.env).
     Por defecto: open_meteo.
     """
-    name = os.getenv("WEATHER_PROVIDER", "open_meteo").strip().lower()
+    # "open-meteo" y "open_meteo" valen igual: el guion es como se escribe la
+    # marca y como estuvo documentado, y equivocarse aqui deja sin clima.
+    name = os.getenv("WEATHER_PROVIDER", "open_meteo").strip().lower().replace("-", "_")
     cls = _REGISTRY.get(name)
     if cls is None:
         raise ValueError(

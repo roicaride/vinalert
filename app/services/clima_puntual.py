@@ -13,10 +13,11 @@ Orden de resolución (para en el primero que dé resultado):
      contigua.
   2. La API de Open-Meteo, si la parcela tiene coordenadas: pronóstico
      (con `past_days`) si `momento` es de los últimos 7 días o futuro,
-     archivo histórico si es más antiguo. Se pide `timezone=UTC` a
-     propósito: así las horas que devuelve la API casan directamente con
-     `fecha_hora`, naive en UTC por convención del proyecto, sin conversión
-     manual alguna.
+     archivo histórico si es más antiguo. Se pide
+     `timezone=Europe/Madrid` a propósito: así las horas que devuelve la API
+     casan directamente con `fecha_hora`, naive en hora de Madrid por
+     convención del proyecto (los esquemas de entrada convierten a Madrid
+     cualquier fecha que llegue con zona).
   3. Nada: (None, None, None, "no_disponible"). Un fallo de red o de la API
      NUNCA debe impedir crear el tratamiento — se degrada en silencio a este
      paso.
@@ -52,7 +53,7 @@ ClimaPuntual = Tuple[Optional[float], Optional[float], Optional[datetime], str]
 def clima_completo_en_momento(parcela, momento: datetime, db) -> Dict[str, Any]:
     """
     Devuelve un diccionario con todas las variables meteorológicas reconstruidas
-    para el instante `momento` (datetime naive UTC).
+    para el instante `momento` (datetime naive en hora de Madrid).
     """
     resultado = _desde_log_clima_completo(parcela.id, momento, db)
     if resultado is not None:

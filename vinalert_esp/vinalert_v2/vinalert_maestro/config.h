@@ -100,12 +100,10 @@ static const int SENSOR_IDS[NUM_SLAVES][SENSORS_PER_SLAVE] = {
 // ===================== NTP =====================
 #define NTP_SERVER "pool.ntp.org"
 #define NTP_TIMEOUT_MS 10000
-// El backend espera fecha_hora en hora LOCAL (no UTC), igual que el
-// cliente de referencia: +1h base, +1h mas asumiendo siempre horario de
-// verano (no distingue invierno/verano). Si el backend corrige esto mas
-// adelante, hay que actualizar estas dos constantes a la vez.
-#define GMT_OFFSET_SEC 3600
-#define DAYLIGHT_OFFSET_SEC 3600
+// La hora se envia en UTC ("...Z") y el backend la pasa a hora de Madrid.
+// Antes se mandaba hora local con un +2h fijo, que en invierno adelantaba
+// todas las lecturas una hora. Requiere un backend que convierta fechas con
+// zona (desde fix/bloqueantes-produccion): actualizar el backend ANTES.
 
 // ===================== Buffer en flash (reintentos) =====================
 #define BUFFER_FILE_PATH "/buffer.jsonl"

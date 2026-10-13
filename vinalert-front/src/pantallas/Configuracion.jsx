@@ -92,7 +92,9 @@ export default function Configuracion() {
   const navigate = useNavigate();
   const { parcela, puedeGestionar, setParcela } = useParcela();
   const { usuario } = useSesion();
-  const esSuperAdmin = usuario?.email === 'admin@vinalert.dev';
+  // Lo decide el backend (marca en la BD), nunca el email: el registro es
+  // publico y el email del admin lo podria registrar cualquiera.
+  const esSuperAdmin = Boolean(usuario?.es_superadmin);
 
   const [campos, setCampos] = useState(() => aFormulario(parcela));
   const [coordenadasGuardadas, setCoordenadasGuardadas] = useState({
@@ -105,7 +107,7 @@ export default function Configuracion() {
   const [sonda, setSonda] = useState(null);
   const [error, setError] = useState(null);
 
-  // Gestión de dispositivos ESP32 / Tokens IoT (Exclusivo admin@vinalert.dev)
+  // Gestión de dispositivos ESP32 / Tokens IoT (exclusivo del superadmin)
   const [dispositivos, setDispositivos] = useState([]);
   const [nombreDisp, setNombreDisp] = useState('');
   const [creandoDisp, setCreandoDisp] = useState(false);

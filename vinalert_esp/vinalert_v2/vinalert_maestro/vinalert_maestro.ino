@@ -107,11 +107,10 @@ void setup() {
 
     if (ntpSync(NTP_TIMEOUT_MS)) {
       rtcEpoch = nowEpochUtc();
-      isoTs = nowLocalIso();
     } else {
       rtcEpoch = cycleEpoch + activeCycleSeconds; // estimacion sin NTP
-      isoTs = epochToLocalIso(rtcEpoch);
     }
+    isoTs = epochToIsoUtc(rtcEpoch);
 
     // reintenta primero lo que quedo pendiente de ciclos anteriores
     std::vector<String> buffered = bufferLoadAll();
@@ -136,7 +135,7 @@ void setup() {
   } else {
     oledLog("WiFi FALLO");
     rtcEpoch = cycleEpoch + activeCycleSeconds; // estimacion sin NTP
-    isoTs = epochToLocalIso(rtcEpoch);
+    isoTs = epochToIsoUtc(rtcEpoch);
   }
 
   // Una peticion HTTP por cada sensor que haya leido bien este ciclo (no

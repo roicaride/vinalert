@@ -23,6 +23,8 @@ htmlcov/
 *.db
 *.sqlite
 *.sqlite3
+# Copias de scripts/backup_db.sh
+backups/
 
 # ─── Node / frontend ─────────────────────────────────────────────────────────
 node_modules/

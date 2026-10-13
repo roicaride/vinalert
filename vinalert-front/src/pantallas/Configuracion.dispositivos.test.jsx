@@ -1,4 +1,4 @@
-// La seccion de dispositivos ESP32 solo la ve admin@vinalert.dev, asi que
+// La seccion de dispositivos ESP32 solo la ve el superadmin, asi que
 // vive en su propio fichero: mockear useSesion para el fichero entero haria
 // aparecer esta seccion en los tests de Configuracion.test.jsx, que montan la
 // pantalla como un gestor cualquiera.
@@ -7,7 +7,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import { DISPOSITIVO, PARCELA_GESTOR, USUARIO_ADMIN } from '../test/respuestas';
+import { DISPOSITIVO, PARCELA_GESTOR, USUARIO, USUARIO_ADMIN, USUARIO_SUPERADMIN } from '../test/respuestas';
 import { ProveedorParcela } from '../parcela/ParcelaContext';
 import Configuracion from './Configuracion';
 
@@ -24,8 +24,10 @@ vi.mock('../api/dispositivos', () => ({
   borrarDispositivo: vi.fn(),
   actualizarIntervaloDispositivo: vi.fn(),
 }));
+// Mutable para poder probar quien ve la seccion; cada test parte del superadmin.
+let usuarioActual;
 vi.mock('../sesion/SesionContext', () => ({
-  useSesion: () => ({ usuario: USUARIO_ADMIN, cargando: false, setUsuario: vi.fn(), cerrarSesion: vi.fn() }),
+  useSesion: () => ({ usuario: usuarioActual, cargando: false, setUsuario: vi.fn(), cerrarSesion: vi.fn() }),
 }));
 
 import { obtenerParcela } from '../api/parcelas';
@@ -44,7 +46,26 @@ function montar() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  usuarioActual = USUARIO_SUPERADMIN;
   listarDispositivos.mockResolvedValue([DISPOSITIVO]);
+});
+
+// Quien es superadmin lo dice el backend (es_superadmin de /auth/me), no el
+// email: el email se puede registrar, la marca solo se pone en la BD.
+test('el superadmin ve los dispositivos aunque su email no sea el de siempre', async () => {
+  usuarioActual = { ...USUARIO, email: 'jefa@bodega.es', es_superadmin: true };
+  montar();
+
+  expect(await screen.findByLabelText('Intervalo de envío de Maestro LoRa')).toBeInTheDocument();
+});
+
+test('una cuenta con el email del admin pero sin la marca no ve los dispositivos', async () => {
+  usuarioActual = { ...USUARIO_ADMIN, es_superadmin: false };
+  montar();
+
+  await screen.findByDisplayValue(PARCELA_GESTOR.nombre);
+  expect(screen.queryByLabelText('Intervalo de envío de Maestro LoRa')).not.toBeInTheDocument();
+  expect(listarDispositivos).not.toHaveBeenCalled();
 });
 
 test('el intervalo de envio del dispositivo se muestra con su valor actual', async () => {

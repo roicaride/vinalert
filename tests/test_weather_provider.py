@@ -114,3 +114,12 @@ def test_la_lluvia_actual_cuenta_los_chubascos():
     assert datos["lluvia_mm"] == 0.6
     assert "precipitation" in OpenMeteoProvider._CURRENT_VARS
     assert "rain" not in OpenMeteoProvider._CURRENT_VARS
+
+
+def test_nombre_del_proveedor_admite_guion(monkeypatch):
+    # .env.example y el README lo escribieron durante meses como "open-meteo";
+    # con ese valor no se guardaba clima y el fallo solo quedaba en el log.
+    from app.services.weather import OpenMeteoProvider, get_provider
+
+    monkeypatch.setenv("WEATHER_PROVIDER", "open-meteo")
+    assert isinstance(get_provider(), OpenMeteoProvider)

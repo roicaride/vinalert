@@ -227,6 +227,7 @@ def escenario(client, auth_headers, db_session):
     db_session.add(ParcelaUsuario(parcela_id=pid, usuario_id=u_lector.id, rol="lectura"))
     u_admin = db_session.query(Usuario).filter_by(email="admin@vinalert.dev").first()
     u_admin.rol = "admin"
+    u_admin.es_superadmin = True
     db_session.commit()
 
     return {
