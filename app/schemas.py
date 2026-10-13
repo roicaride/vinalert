@@ -112,6 +112,15 @@ class UsuarioAdminResp(BaseModel):
     n_parcelas: int
 
 
+class RecuperarPassword(BaseModel):
+    email: EmailNormalizado
+
+
+class RestablecerPassword(BaseModel):
+    token: str = Field(max_length=200)
+    password: PasswordNueva
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str

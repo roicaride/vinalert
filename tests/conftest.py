@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 
 from app.database import Base, get_db
 from app.main import app
-from tests.ayudas import registrar
+from tests.ayudas import Buzon, registrar
 
 
 class SesionSinCierre:
@@ -85,3 +85,13 @@ def parcela_id(client, auth_headers):
         headers=auth_headers,
     )
     return resp.json()["id"]
+
+
+@pytest.fixture()
+def buzon(monkeypatch):
+    """Los emails que la API habria enviado durante el test."""
+    from app.services import correo
+
+    b = Buzon()
+    monkeypatch.setattr(correo, "enviar", b)
+    return b

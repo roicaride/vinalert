@@ -57,3 +57,18 @@ def hacer_superadmin(db_session, email):
     u.es_superadmin = True
     db_session.commit()
     return u
+
+
+class Buzon:
+    """Sustituye a correo.enviar en los tests: guarda los emails en vez de enviarlos."""
+
+    def __init__(self):
+        self.mensajes = []
+
+    def __call__(self, destinatario, asunto, texto, html):
+        self.mensajes.append({"para": destinatario, "asunto": asunto, "texto": texto})
+
+    def token(self, indice=-1):
+        import re
+
+        return re.search(r"token=([\w-]+)", self.mensajes[indice]["texto"]).group(1)
