@@ -3,7 +3,6 @@ import { obtenerClimaDiario, obtenerSueloDiario } from '../api/analisis';
 import { obtenerHistorico } from '../api/estado';
 import { listarFoliar } from '../api/foliar';
 import { listarTratamientos } from '../api/tratamientos';
-import { descargarCsv, exportarExcelMultilibro } from '../utils/exportar';
 import { diarioSuelo } from '../pantallas/analisis/series';
 import { CuadroMarca } from '../marca/Marca';
 import Boton, { Enlace } from '../ui/Boton';
@@ -29,6 +28,8 @@ export default function ModalExportar({ parcela, abierto, alCerrar }) {
     setExportando(true);
     setError(null);
     try {
+      // La libreria de Excel pesa unos 400 KB: se descarga al exportar, no con la pantalla.
+      const { descargarCsv, exportarExcelMultilibro } = await import('../utils/exportar');
       // 1. Cargar todos los datos actualizados de la parcela
       const [suelo, clima, historico, tratamientos, foliar] = await Promise.all([
         obtenerSueloDiario(parcela.id, 365),

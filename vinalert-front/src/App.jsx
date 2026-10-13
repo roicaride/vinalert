@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 
 
@@ -6,28 +6,32 @@ import { configurarSalidaDeSesion } from './api/cliente';
 import { listarParcelas } from './api/parcelas';
 import AppLayout from './layout/AppLayout';
 import { ProveedorParcela } from './parcela/ParcelaContext';
-import Configuracion from './pantallas/Configuracion';
-import Sensores from './pantallas/Sensores';
-import Miembros from './pantallas/Miembros';
-import Estado from './pantallas/Estado';
-import Tratamientos from './pantallas/Tratamientos';
-import Foliar from './pantallas/Foliar';
-import Analisis from './pantallas/Analisis';
-import Administracion from './pantallas/Administracion';
-import Invitacion from './pantallas/Invitacion';
-import AvisoLegal from './pantallas/legal/AvisoLegal';
-import Condiciones from './pantallas/legal/Condiciones';
-import Cookies from './pantallas/legal/Cookies';
-import Privacidad from './pantallas/legal/Privacidad';
 import Login from './pantallas/Login';
-import MiCuenta from './pantallas/MiCuenta';
-import Recuperar from './pantallas/Recuperar';
-import Restablecer from './pantallas/Restablecer';
 import Portada from './pantallas/Portada';
 import SeleccionParcela from './pantallas/SeleccionParcela';
 import MensajeError from './errores/MensajeError';
 import { Cargando } from './ui/Estados';
 import { SECCION_POR_DEFECTO, SECCIONES } from './secciones';
+
+// Cada pantalla se descarga al visitarla por primera vez. La portada y el
+// login van en el bloque inicial: es lo que ve primero quien llega, y asi no
+// esperan a recharts, leaflet ni la libreria de Excel.
+const Configuracion = lazy(() => import('./pantallas/Configuracion'));
+const Sensores = lazy(() => import('./pantallas/Sensores'));
+const Miembros = lazy(() => import('./pantallas/Miembros'));
+const Estado = lazy(() => import('./pantallas/Estado'));
+const Tratamientos = lazy(() => import('./pantallas/Tratamientos'));
+const Foliar = lazy(() => import('./pantallas/Foliar'));
+const Analisis = lazy(() => import('./pantallas/Analisis'));
+const Administracion = lazy(() => import('./pantallas/Administracion'));
+const Invitacion = lazy(() => import('./pantallas/Invitacion'));
+const AvisoLegal = lazy(() => import('./pantallas/legal/AvisoLegal'));
+const Condiciones = lazy(() => import('./pantallas/legal/Condiciones'));
+const Cookies = lazy(() => import('./pantallas/legal/Cookies'));
+const Privacidad = lazy(() => import('./pantallas/legal/Privacidad'));
+const MiCuenta = lazy(() => import('./pantallas/MiCuenta'));
+const Recuperar = lazy(() => import('./pantallas/Recuperar'));
+const Restablecer = lazy(() => import('./pantallas/Restablecer'));
 import RutaProtegida from './sesion/RutaProtegida';
 import { ProveedorSesion, useSesion } from './sesion/SesionContext';
 
@@ -119,6 +123,7 @@ export default function App() {
     <BrowserRouter>
       <ConectorSesion>
         <ProveedorSesion>
+          <Suspense fallback={<Cargando texto="Cargando" />}>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/recuperar" element={<Recuperar />} />
@@ -150,6 +155,7 @@ export default function App() {
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </Suspense>
         </ProveedorSesion>
       </ConectorSesion>
     </BrowserRouter>

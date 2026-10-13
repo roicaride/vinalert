@@ -66,7 +66,8 @@ test('la politica de cookies explica que solo hay almacenamiento tecnico', async
   abrir('/cookies');
 
   expect(await screen.findByRole('heading', { name: 'Política de cookies' })).toBeInTheDocument();
-  expect(screen.getByText('access_token')).toBeInTheDocument();
+  // El contenido se pinta cuando llega la configuracion, despues del titulo.
+  expect(await screen.findByText('access_token')).toBeInTheDocument();
   expect(screen.getByText('vinalert_idioma')).toBeInTheDocument();
 });
 
