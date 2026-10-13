@@ -17,17 +17,27 @@ class Usuario(Base):
     nombre = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     telefono = Column(String)
-    hashed_password = Column(String, nullable=False)
+    # Nula mientras la cuenta esta pendiente: invitada pero sin aceptar.
+    hashed_password = Column(String, nullable=True)
     rol = Column(String, default="agricultor")
     # Administrador del sistema (listado de cuentas, dispositivos ESP32). Solo
     # se da a mano en la BD o con semilla_inicial.py: ningun endpoint lo
     # concede. Antes se deducia del email, y el registro es publico.
     es_superadmin = Column(Boolean, nullable=False, default=False, server_default="false")
+    # Va dentro de cada token de sesion. Subirla invalida todas las sesiones
+    # abiertas de la cuenta: al restablecer o cambiar la contrasena y al
+    # "cerrar sesion en todos los dispositivos".
+    token_version = Column(Integer, nullable=False, default=0, server_default="0")
     # Cuando se dio de alta. Nula en las cuentas anteriores a la migracion
     # 2026-09-18: esa fecha no se guardaba y no se puede reconstruir.
     creado_en = Column(DateTime, default=_ahora_madrid)
 
     parcelas_asociadas = relationship("ParcelaUsuario", back_populates="usuario", cascade="all, delete-orphan")
+
+    @property
+    def pendiente(self) -> bool:
+        """Invitada pero sin aceptar: todavia no ha puesto contrasena."""
+        return self.hashed_password is None
 
 
 class Parcela(Base):
@@ -255,3 +265,45 @@ class DispositivoIoT(Base):
 
     parcela = relationship("Parcela", back_populates="dispositivos")
 
+
+class TokenCuenta(Base):
+    """
+    Enlace de invitacion o de recuperacion de contrasena. Se guarda solo el
+    SHA-256 del token: con un volcado de la BD, los enlaces vivos no sirven.
+    Fechas en UTC sin zona (ver app/services/reloj.py).
+    """
+    __tablename__ = "tokens_cuenta"
+    id = Column(Integer, primary_key=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False)
+    tipo = Column(String, nullable=False)  # "invitacion" | "recuperacion"
+    hash_token = Column(String(64), nullable=False, unique=True)
+    creado_en = Column(DateTime, nullable=False)
+    caduca_en = Column(DateTime, nullable=False)
+    usado_en = Column(DateTime, nullable=True)
+    creado_por_id = Column(Integer, ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True)
+    parcela_id = Column(Integer, ForeignKey("parcelas.id", ondelete="SET NULL"), nullable=True)
+
+    usuario = relationship("Usuario", foreign_keys=[usuario_id])
+    creado_por = relationship("Usuario", foreign_keys=[creado_por_id])
+    parcela = relationship("Parcela")
+
+    __table_args__ = (Index("ix_tokens_cuenta_usuario_tipo", "usuario_id", "tipo"),)
+
+
+class IntentoAcceso(Base):
+    """
+    Cada intento de login o de recuperacion: sirve para los limites de intentos
+    y como registro de accesos. Fechas en UTC sin zona.
+    """
+    __tablename__ = "intentos_acceso"
+    id = Column(Integer, primary_key=True)
+    momento = Column(DateTime, nullable=False)
+    tipo = Column(String, nullable=False)  # "login" | "recuperacion" | "restablecimiento"
+    email = Column(String, nullable=False)
+    ip = Column(String, nullable=False)
+    resultado = Column(String, nullable=False)  # "exito" | "fallo" | "bloqueado"
+
+    __table_args__ = (
+        Index("ix_intentos_acceso_email", "email", "tipo", "momento"),
+        Index("ix_intentos_acceso_ip", "ip", "tipo", "momento"),
+    )
