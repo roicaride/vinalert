@@ -35,6 +35,9 @@ export default function CabeceraCuenta() {
               Administración
             </NavLink>
           )}
+          <NavLink to="/cuenta" className={pestana}>
+            Mi cuenta
+          </NavLink>
         </nav>
       </div>
       <div className="flex items-stretch">

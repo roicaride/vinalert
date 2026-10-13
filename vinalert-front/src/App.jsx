@@ -16,6 +16,7 @@ import Analisis from './pantallas/Analisis';
 import Administracion from './pantallas/Administracion';
 import Invitacion from './pantallas/Invitacion';
 import Login from './pantallas/Login';
+import MiCuenta from './pantallas/MiCuenta';
 import Recuperar from './pantallas/Recuperar';
 import Restablecer from './pantallas/Restablecer';
 import Portada from './pantallas/Portada';
@@ -122,6 +123,7 @@ export default function App() {
             <Route path="/" element={<Inicio />} />
             <Route path="/parcelas" element={<RutaProtegida><Entrada /></RutaProtegida>} />
             <Route path="/admin" element={<RutaProtegida><Administracion /></RutaProtegida>} />
+            <Route path="/cuenta" element={<RutaProtegida><MiCuenta /></RutaProtegida>} />
             <Route
               path="/p/:parcelaId"
               element={<RutaProtegida><ParcelaLayout /></RutaProtegida>}

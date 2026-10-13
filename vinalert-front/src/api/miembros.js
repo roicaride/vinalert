@@ -18,3 +18,8 @@ export async function cambiarRol(parcelaId, usuarioId, rol) {
 export async function retirarMiembro(parcelaId, usuarioId) {
   await cliente.delete(`/parcelas/${parcelaId}/usuarios/${usuarioId}`);
 }
+
+/** Vuelve a enviar el email de invitacion a alguien que aun no la ha aceptado. */
+export async function reenviarInvitacion(usuarioId) {
+  await cliente.post(`/auth/invitaciones/${usuarioId}/reenviar`);
+}

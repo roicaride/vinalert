@@ -12,10 +12,11 @@ vi.mock('../api/miembros', () => ({
   anadirMiembro: vi.fn(),
   cambiarRol: vi.fn(),
   retirarMiembro: vi.fn(),
+  reenviarInvitacion: vi.fn(),
 }));
 vi.mock('../sesion/SesionContext', () => ({ useSesion: vi.fn() }));
 import { obtenerParcela } from '../api/parcelas';
-import { anadirMiembro, cambiarRol, listarMiembros, retirarMiembro } from '../api/miembros';
+import { anadirMiembro, cambiarRol, listarMiembros, reenviarInvitacion, retirarMiembro } from '../api/miembros';
 import { useSesion } from '../sesion/SesionContext';
 
 // Observa el permiso derivado del contexto compartido para poder comprobar,
@@ -73,21 +74,42 @@ test('anadir un miembro lo agrega a la lista', async () => {
   expect(await screen.findByText('otra@vinalert.dev')).toBeInTheDocument();
 });
 
-test('anadir un email sin cuenta muestra el mensaje del backend', async () => {
+const PENDIENTE = { usuario_id: 7, nombre: '', email: 'nueva@vinalert.dev', rol: 'lectura', pendiente: true };
+
+test('invitar un email sin cuenta lo añade como pendiente y avisa de la invitacion', async () => {
   listarMiembros.mockResolvedValue([MIEMBRO_GESTOR]);
-  anadirMiembro.mockRejectedValue({
-    response: {
-      status: 404,
-      data: { detail: 'No hay ninguna cuenta con ese email. Esa persona debe registrarse primero.' },
-    },
-  });
+  anadirMiembro.mockResolvedValue(PENDIENTE);
   montar(PARCELA_GESTOR);
 
   await screen.findByText('test@vinalert.dev');
-  await userEvent.type(screen.getByLabelText('Email'), 'nadie@vinalert.dev');
+  expect(screen.queryByText(/tiene que estar registrada/i)).not.toBeInTheDocument();
+  await userEvent.type(screen.getByLabelText('Email'), 'nueva@vinalert.dev');
   await userEvent.click(screen.getByRole('button', { name: 'Añadir' }));
 
-  expect(await screen.findByText(/no hay ninguna cuenta/i)).toBeInTheDocument();
+  const fila = (await screen.findByText('nueva@vinalert.dev')).closest('tr');
+  expect(within(fila).getByText('Pendiente')).toBeInTheDocument();
+  expect(screen.getByText(/le hemos enviado una invitación/i)).toBeInTheDocument();
+});
+
+test('un gestor puede reenviar la invitacion de un pendiente', async () => {
+  listarMiembros.mockResolvedValue([MIEMBRO_GESTOR, PENDIENTE]);
+  reenviarInvitacion.mockResolvedValue();
+  montar(PARCELA_GESTOR);
+
+  const fila = (await screen.findByText('nueva@vinalert.dev')).closest('tr');
+  await userEvent.click(within(fila).getByRole('button', { name: /reenviar invitación/i }));
+
+  expect(reenviarInvitacion).toHaveBeenCalledWith(7);
+  expect(await screen.findByText(/invitación reenviada a nueva@vinalert.dev/i)).toBeInTheDocument();
+});
+
+test('un lector ve quien esta pendiente pero no puede reenviar', async () => {
+  listarMiembros.mockResolvedValue([MIEMBRO_GESTOR, PENDIENTE]);
+  montar(PARCELA_LECTURA);
+
+  const fila = (await screen.findByText('nueva@vinalert.dev')).closest('tr');
+  expect(within(fila).getByText('Pendiente')).toBeInTheDocument();
+  expect(within(fila).queryByRole('button', { name: /reenviar/i })).not.toBeInTheDocument();
 });
 
 test('retirar pide confirmacion y llama al backend', async () => {

@@ -7,10 +7,10 @@ import App from '../App';
 
 vi.mock('../api/auth', () => ({ me: vi.fn(), login: vi.fn(), registro: vi.fn() }));
 vi.mock('../api/parcelas', () => ({ listarParcelas: vi.fn(), obtenerParcela: vi.fn() }));
-vi.mock('../api/admin', () => ({ listarUsuarios: vi.fn() }));
+vi.mock('../api/admin', () => ({ listarUsuarios: vi.fn(), invitarCliente: vi.fn() }));
 vi.mock('../utils/exportar', () => ({ exportarExcelMultilibro: vi.fn(), descargarCsv: vi.fn() }));
 import { me } from '../api/auth';
-import { listarUsuarios } from '../api/admin';
+import { invitarCliente, listarUsuarios } from '../api/admin';
 import { listarParcelas } from '../api/parcelas';
 import { descargarCsv, exportarExcelMultilibro } from '../utils/exportar';
 
@@ -102,4 +102,37 @@ test('la seleccion de parcelas ensena el acceso a Administracion solo al superad
   render(<App />);
   await screen.findByRole('heading', { name: /elige una parcela/i });
   expect(screen.queryByRole('link', { name: 'Administración' })).not.toBeInTheDocument();
+});
+
+
+test('el admin invita a un cliente nuevo y aparece como pendiente', async () => {
+  listarUsuarios.mockResolvedValue(CUENTAS);
+  invitarCliente.mockResolvedValue({
+    id: 50, nombre: 'Bodega Nova', email: 'bodega@nova.es', telefono: null, rol: 'agricultor',
+    creado_en: '2026-10-13T10:00:00', n_parcelas: 0, pendiente: true,
+  });
+  entrarEnAdmin();
+  await screen.findByRole('table');
+
+  fireEvent.change(screen.getByLabelText('Email del cliente'), { target: { value: 'bodega@nova.es' } });
+  fireEvent.change(screen.getByLabelText('Nombre del cliente'), { target: { value: 'Bodega Nova' } });
+  fireEvent.click(screen.getByRole('button', { name: /invitar/i }));
+
+  expect(await screen.findByText(/invitación enviada a bodega@nova.es/i)).toBeInTheDocument();
+  expect(invitarCliente).toHaveBeenCalledWith('bodega@nova.es', 'Bodega Nova');
+  const fila = screen.getByText('bodega@nova.es').closest('tr');
+  expect(within(fila).getByText('Pendiente')).toBeInTheDocument();
+});
+
+test('invitar un email que ya tiene cuenta muestra el motivo', async () => {
+  listarUsuarios.mockResolvedValue(CUENTAS);
+  invitarCliente.mockRejectedValue({ response: { status: 409, data: { detail: 'Ya hay una cuenta con ese email.' } } });
+  entrarEnAdmin();
+  await screen.findByRole('table');
+
+  fireEvent.change(screen.getByLabelText('Email del cliente'), { target: { value: 'marta@vinalert.dev' } });
+  fireEvent.change(screen.getByLabelText('Nombre del cliente'), { target: { value: 'Marta' } });
+  fireEvent.click(screen.getByRole('button', { name: /invitar/i }));
+
+  expect(await screen.findByText('Ya hay una cuenta con ese email.')).toBeInTheDocument();
 });

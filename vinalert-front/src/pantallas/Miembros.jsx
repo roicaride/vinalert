@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 
-import { anadirMiembro, cambiarRol, listarMiembros, retirarMiembro } from '../api/miembros';
+import { anadirMiembro, cambiarRol, listarMiembros, reenviarInvitacion, retirarMiembro } from '../api/miembros';
 import MensajeError from '../errores/MensajeError';
 import { useParcela } from '../parcela/ParcelaContext';
 import SoloGestor from '../parcela/SoloGestor';
 import { useSesion } from '../sesion/SesionContext';
 import Boton, { Enlace } from '../ui/Boton';
 import { claseControl } from '../ui/Campo';
-import { Cargando, Marbete } from '../ui/Estados';
+import { Aviso, Cargando, Marbete } from '../ui/Estados';
 import { Encabezado } from '../ui/Panel';
 
 export default function Miembros() {
@@ -21,6 +21,8 @@ export default function Miembros() {
   const [aniadiendo, setAniadiendo] = useState(false);
   const [cambiandoId, setCambiandoId] = useState(null);
   const [retirandoId, setRetirandoId] = useState(null);
+  const [reenviandoId, setReenviandoId] = useState(null);
+  const [aviso, setAviso] = useState(null);
 
   useEffect(() => {
     let vigente = true;
@@ -34,10 +36,14 @@ export default function Miembros() {
   const aniadir = async (e) => {
     e.preventDefault();
     setError(null);
+    setAviso(null);
     setAniadiendo(true);
     try {
       const nuevo = await anadirMiembro(parcela.id, email, rolNuevo);
       setMiembros((prev) => [...prev, nuevo]);
+      if (nuevo.pendiente) {
+        setAviso(`${nuevo.email} aún no tenía cuenta: le hemos enviado una invitación por email.`);
+      }
       setEmail('');
       setRolNuevo('lectura');
     } catch (err) {
@@ -69,8 +75,22 @@ export default function Miembros() {
     }
   };
 
+  const reenviar = async (miembro) => {
+    setError(null);
+    setAviso(null);
+    setReenviandoId(miembro.usuario_id);
+    try {
+      await reenviarInvitacion(miembro.usuario_id);
+      setAviso(`Invitación reenviada a ${miembro.email}.`);
+    } catch (err) {
+      setError(err);
+    } finally {
+      setReenviandoId(null);
+    }
+  };
+
   const retirar = async (miembro) => {
-    if (!window.confirm(`¿Retirar a ${miembro.nombre} de esta parcela?`)) return;
+    if (!window.confirm(`¿Retirar a ${miembro.nombre || miembro.email} de esta parcela?`)) return;
     setError(null);
     setRetirandoId(miembro.usuario_id);
     try {
@@ -110,6 +130,12 @@ export default function Miembros() {
         </Marbete>
       </Encabezado>
 
+      {aviso && (
+        <div className="border-b border-linea px-6 py-3">
+          <Aviso tono="brote" role="status">{aviso}</Aviso>
+        </div>
+      )}
+
       {error && (
         <div className="border-b border-linea px-6 py-3">
           <MensajeError
@@ -136,16 +162,19 @@ export default function Miembros() {
             {miembros.map((m) => (
               <tr key={m.usuario_id} className="transition-colors hover:bg-alza">
                 <td className="px-4 py-2.5 text-sm text-oso">
-                  {m.nombre}
+                  {m.nombre || <span className="text-oso-4">—</span>}
                   {m.usuario_id === usuario.id && (
                     <span className="rotulo ml-2 text-oso-4">Tú</span>
+                  )}
+                  {m.pendiente && (
+                    <Marbete tono="ambar" className="ml-2">Pendiente</Marbete>
                   )}
                 </td>
                 <td className="px-4 py-2.5 font-mono text-xs text-oso-3">{m.email}</td>
                 <td className="px-4 py-2.5">
                   {puedeGestionar ? (
                     <select
-                      aria-label={`Rol de ${m.nombre}`}
+                      aria-label={`Rol de ${m.nombre || m.email}`}
                       value={m.rol}
                       disabled={cambiandoId === m.usuario_id}
                       onChange={(e) => cambiar(m.usuario_id, e.target.value)}
@@ -161,7 +190,15 @@ export default function Miembros() {
                   )}
                 </td>
                 <SoloGestor>
-                  <td className="px-4 py-2.5">
+                  <td className="space-x-4 px-4 py-2.5">
+                    {m.pendiente && (
+                      <Enlace
+                        disabled={reenviandoId === m.usuario_id}
+                        onClick={() => reenviar(m)}
+                      >
+                        {reenviandoId === m.usuario_id ? 'Reenviando…' : 'Reenviar invitación'}
+                      </Enlace>
+                    )}
                     {m.usuario_id !== usuario.id && (
                       <Enlace
                         disabled={retirandoId === m.usuario_id}
@@ -213,7 +250,7 @@ export default function Miembros() {
             {aniadiendo ? 'Añadiendo…' : 'Añadir'}
           </Boton>
           <p className="mb-1 max-w-xs text-xs text-oso-4">
-            La persona ya tiene que estar registrada en Viñalert.
+            Si aún no tiene cuenta, le llegará una invitación por email para crearla.
           </p>
         </form>
       </SoloGestor>

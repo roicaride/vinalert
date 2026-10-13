@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { listarUsuarios } from '../api/admin';
+import { invitarCliente, listarUsuarios } from '../api/admin';
 import MensajeError from '../errores/MensajeError';
 import CabeceraCuenta from '../layout/CabeceraCuenta';
 import Boton from '../ui/Boton';
@@ -55,6 +55,29 @@ export default function Administracion() {
   const [cuentas, setCuentas] = useState(null);
   const [error, setError] = useState(null);
   const [busqueda, setBusqueda] = useState('');
+  const [emailInvitado, setEmailInvitado] = useState('');
+  const [nombreInvitado, setNombreInvitado] = useState('');
+  const [invitando, setInvitando] = useState(false);
+  const [avisoInvitacion, setAvisoInvitacion] = useState(null);
+  const [errorInvitacion, setErrorInvitacion] = useState(null);
+
+  const invitar = async (e) => {
+    e.preventDefault();
+    setAvisoInvitacion(null);
+    setErrorInvitacion(null);
+    setInvitando(true);
+    try {
+      const nueva = await invitarCliente(emailInvitado, nombreInvitado);
+      setCuentas((prev) => [nueva, ...(prev ?? [])]);
+      setAvisoInvitacion(`Invitación enviada a ${nueva.email}.`);
+      setEmailInvitado('');
+      setNombreInvitado('');
+    } catch (err) {
+      setErrorInvitacion(err);
+    } finally {
+      setInvitando(false);
+    }
+  };
 
   useEffect(() => {
     let vigente = true;
@@ -127,6 +150,49 @@ export default function Administracion() {
           </Rejilla>
         </section>
 
+        {/* Alta de clientes: solo por invitacion. El cliente entra sin
+            parcelas, crea las suyas e invita a su gente. */}
+        <form className="flex flex-wrap items-end gap-4 border-b border-linea px-6 py-4" onSubmit={invitar}>
+          <div className="w-full max-w-xs">
+            <label htmlFor="email-cliente" className="rotulo block">
+              Email del cliente
+            </label>
+            <input
+              id="email-cliente"
+              type="email"
+              required
+              value={emailInvitado}
+              onChange={(e) => setEmailInvitado(e.target.value)}
+              placeholder="bodega@ejemplo.es"
+              className={`${claseControl} mt-1.5`}
+            />
+          </div>
+          <div className="w-full max-w-xs">
+            <label htmlFor="nombre-cliente" className="rotulo block">
+              Nombre del cliente
+            </label>
+            <input
+              id="nombre-cliente"
+              type="text"
+              required
+              maxLength={120}
+              value={nombreInvitado}
+              onChange={(e) => setNombreInvitado(e.target.value)}
+              placeholder="Bodega o persona"
+              className={`${claseControl} mt-1.5`}
+            />
+          </div>
+          <Boton tono="solido" type="submit" disabled={invitando} className="mb-px py-2.5">
+            {invitando ? 'Invitando…' : 'Invitar cliente'}
+          </Boton>
+          {avisoInvitacion && <Aviso tono="brote" role="status" className="w-full">{avisoInvitacion}</Aviso>}
+          {errorInvitacion && (
+            <div className="w-full">
+              <MensajeError error={errorInvitacion} />
+            </div>
+          )}
+        </form>
+
         <div className="flex flex-wrap items-end gap-4 border-b border-linea bg-alza px-6 py-3">
           {/* El ancho va en el envoltorio: en el input chocaria con el w-full
               de claseControl y ganaria el que la hoja ponga despues. */}
@@ -173,7 +239,10 @@ export default function Administracion() {
               )}
               {visibles.map((c) => (
                 <tr key={c.id} className="transition-colors hover:bg-alza">
-                  <td className="px-4 py-2.5 text-sm text-oso">{c.nombre}</td>
+                  <td className="px-4 py-2.5 text-sm text-oso">
+                    {c.nombre || <span className="text-oso-4">—</span>}
+                    {c.pendiente && <Marbete tono="ambar" className="ml-2">Pendiente</Marbete>}
+                  </td>
                   <td className="px-4 py-2.5 font-mono text-xs text-oso-2">{c.email}</td>
                   <td className="px-4 py-2.5">
                     <Marbete tono={c.rol === 'admin' ? 'ambar' : 'neutro'}>

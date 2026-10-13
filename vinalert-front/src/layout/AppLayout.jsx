@@ -92,7 +92,8 @@ export default function AppLayout() {
               <p className="mt-0.5 truncate font-mono text-[11px] text-oso-3">{usuario?.email}</p>
             </div>
           </div>
-          <div className="flex items-center border-l border-linea px-5 py-3">
+          <div className="flex items-center gap-4 border-l border-linea px-5 py-3">
+            <Enlace onClick={() => navigate('/cuenta')}>Mi cuenta</Enlace>
             <Enlace onClick={() => { cerrarSesion(); navigate('/login'); }}>
               Cerrar sesión
             </Enlace>
