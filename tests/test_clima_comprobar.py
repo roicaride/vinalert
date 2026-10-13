@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 from app.models import LogClima
+from tests.ayudas import registrar
 
 # Forma real de lo que devuelve OpenMeteoProvider.fetch(): las 25 claves de
 # su contrato (ver _MAPA_CURRENT y las cuatro claves de pronostico en
@@ -118,10 +119,7 @@ def test_un_lector_no_puede_sondear(client, auth_headers, parcela_id, db_session
     """Gasta cuota de Open-Meteo, que es un recurso compartido y limitado."""
     from app.models import ParcelaUsuario, Usuario
 
-    client.post(
-        "/auth/register",
-        json={"nombre": "L", "email": "lector@test.dev", "password": "clave12345"},
-    )
+    registrar(client, "lector@test.dev", nombre="L", password="clave12345")
     tok = client.post(
         "/auth/token", data={"username": "lector@test.dev", "password": "clave12345"}
     ).json()["access_token"]

@@ -1,8 +1,9 @@
 from app.models import ParcelaUsuario, Usuario
+from tests.ayudas import registrar
 
 
 def _registrar(client, email):
-    client.post("/auth/register", json={"nombre": email, "email": email, "password": "clave12345"})
+    registrar(client, email, nombre=email, password="clave12345")
     resp = client.post("/auth/token", data={"username": email, "password": "clave12345"})
     return {"Authorization": f"Bearer {resp.json()['access_token']}"}
 

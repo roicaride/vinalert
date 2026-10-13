@@ -5,11 +5,11 @@ que registrase ese email en una BD sin el (por ejemplo, una de produccion
 sembrada con otro) se llevaba el listado de usuarios y los dispositivos.
 """
 from app.models import Usuario
-from tests.ayudas import hacer_superadmin
+from tests.ayudas import hacer_superadmin, registrar
 
 
 def _registrar_y_entrar(client, email):
-    client.post("/auth/register", json={"nombre": "X", "email": email, "password": "clave12345"})
+    registrar(client, email, nombre="X", password="clave12345")
     resp = client.post("/auth/token", data={"username": email, "password": "clave12345"})
     return {"Authorization": f"Bearer {resp.json()['access_token']}"}
 

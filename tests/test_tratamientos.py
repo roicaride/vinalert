@@ -4,6 +4,7 @@ from unittest.mock import patch
 import pytest
 
 from app.models import LogClima
+from tests.ayudas import registrar
 
 
 @pytest.fixture(autouse=True)
@@ -89,7 +90,7 @@ def test_borrar_tratamiento(client, auth_headers, parcela_id):
 def test_no_se_puede_borrar_un_tratamiento_de_otro_usuario(client, auth_headers, parcela_id):
     creado = client.post("/tratamientos/", json=_cuerpo(parcela_id), headers=auth_headers).json()
 
-    client.post("/auth/register", json={"nombre": "Otro", "email": "otro@vinalert.dev", "password": "clave12345"})
+    registrar(client, "otro@vinalert.dev", nombre="Otro", password="clave12345")
     token = client.post("/auth/token", data={"username": "otro@vinalert.dev", "password": "clave12345"}).json()["access_token"]
     otros_headers = {"Authorization": f"Bearer {token}"}
 

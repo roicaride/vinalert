@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 
 from app.database import Base, get_db
 from app.main import app
+from tests.ayudas import registrar
 
 
 class SesionSinCierre:
@@ -58,16 +59,16 @@ def client(db_session):
 
     app.dependency_overrides[get_db] = _override_get_db
     test_client = TestClient(app)
+    # Para que los helpers que solo reciben `client` (tests.ayudas.registrar)
+    # puedan crear filas en la misma BD que ve la API.
+    test_client.db = db_session
     yield test_client
     app.dependency_overrides.clear()
 
 
 @pytest.fixture()
 def auth_headers(client):
-    client.post(
-        "/auth/register",
-        json={"nombre": "Test User", "email": "test@vinalert.dev", "password": "clave12345"},
-    )
+    registrar(client, "test@vinalert.dev", nombre="Test User")
     resp = client.post(
         "/auth/token",
         data={"username": "test@vinalert.dev", "password": "clave12345"},

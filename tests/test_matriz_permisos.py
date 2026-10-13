@@ -1,7 +1,7 @@
 import pytest
 
 from app.models import DispositivoIoT, ParcelaUsuario, Usuario
-from tests.ayudas import alta_sensor
+from tests.ayudas import alta_sensor, registrar
 
 
 # La matriz es EXPLICITA a proposito, no derivada de las rutas de FastAPI:
@@ -97,7 +97,7 @@ def sin_red(monkeypatch):
 
 
 def _registrar(client, email):
-    client.post("/auth/register", json={"nombre": email, "email": email, "password": "clave12345"})
+    registrar(client, email, nombre=email, password="clave12345")
     resp = client.post("/auth/token", data={"username": email, "password": "clave12345"})
     return {"Authorization": f"Bearer {resp.json()['access_token']}"}
 

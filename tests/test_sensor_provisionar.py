@@ -1,3 +1,6 @@
+from tests.ayudas import registrar
+
+
 def _provisionar(client, headers, parcela_id, cantidad):
     return client.post(
         f"/parcelas/{parcela_id}/sensores/provisionar",
@@ -65,10 +68,7 @@ def test_cantidad_fuera_de_rango_da_422(client, auth_headers, parcela_id):
 def test_un_lector_no_puede_provisionar(client, auth_headers, parcela_id, db_session):
     from app.models import ParcelaUsuario, Usuario
 
-    client.post(
-        "/auth/register",
-        json={"nombre": "L", "email": "lector@test.dev", "password": "clave12345"},
-    )
+    registrar(client, "lector@test.dev", nombre="L", password="clave12345")
     tok = client.post(
         "/auth/token", data={"username": "lector@test.dev", "password": "clave12345"}
     ).json()["access_token"]

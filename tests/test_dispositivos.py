@@ -1,11 +1,11 @@
 from datetime import datetime
 
 from app.models import Parcela, Usuario
-from tests.ayudas import alta_sensor, hacer_superadmin
+from tests.ayudas import alta_sensor, hacer_superadmin, registrar
 
 
 def _crear_admin(client, db_session):
-    client.post("/auth/register", json={"nombre": "Admin", "email": "admin@vinalert.dev", "password": "clave12345"})
+    registrar(client, "admin@vinalert.dev", nombre="Admin", password="clave12345")
     u = db_session.query(Usuario).filter_by(email="admin@vinalert.dev").first()
     u.rol = "admin"
     db_session.commit()

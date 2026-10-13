@@ -1,3 +1,6 @@
+from tests.ayudas import registrar
+
+
 def test_consultar_una_parcela(client, auth_headers, parcela_id):
     resp = client.get(f"/parcelas/{parcela_id}", headers=auth_headers)
 
@@ -60,10 +63,7 @@ def test_coordenadas_fuera_de_rango_dan_422_al_crear(client, auth_headers):
 def test_un_lector_no_puede_editar(client, auth_headers, parcela_id, db_session):
     from app.models import ParcelaUsuario, Usuario
 
-    client.post(
-        "/auth/register",
-        json={"nombre": "L", "email": "lector@test.dev", "password": "clave12345"},
-    )
+    registrar(client, "lector@test.dev", nombre="L", password="clave12345")
     tok = client.post(
         "/auth/token", data={"username": "lector@test.dev", "password": "clave12345"}
     ).json()["access_token"]
@@ -108,10 +108,7 @@ def test_borrar_parcela_y_cascada(client, auth_headers, parcela_id, db_session):
 def test_lector_no_puede_borrar_parcela(client, auth_headers, parcela_id, db_session):
     from app.models import ParcelaUsuario, Usuario
 
-    client.post(
-        "/auth/register",
-        json={"nombre": "L2", "email": "lector2@test.dev", "password": "clave12345"},
-    )
+    registrar(client, "lector2@test.dev", nombre="L2", password="clave12345")
     tok = client.post(
         "/auth/token", data={"username": "lector2@test.dev", "password": "clave12345"}
     ).json()["access_token"]

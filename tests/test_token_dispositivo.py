@@ -13,12 +13,12 @@ from jose import jwt
 
 from app.auth import ALGORITHM, SECRET_KEY, crear_token_acceso
 from app.models import LogSensor, Parcela, Usuario
-from tests.ayudas import alta_sensor, hacer_superadmin
+from tests.ayudas import alta_sensor, hacer_superadmin, registrar
 
 
 @pytest.fixture()
 def admin_headers(client, db_session):
-    client.post("/auth/register", json={"nombre": "Admin", "email": "admin@vinalert.dev", "password": "clave12345"})
+    registrar(client, "admin@vinalert.dev", nombre="Admin", password="clave12345")
     u = hacer_superadmin(db_session, "admin@vinalert.dev")
     u.rol = "admin"
     db_session.commit()
@@ -72,7 +72,7 @@ def test_el_esp32_sube_lecturas_de_su_parcela(client, auth_headers, esp_headers,
 
 def test_el_esp32_no_sube_lecturas_a_otra_parcela(client, esp_headers, db_session):
     # Parcela de otra persona, con su propio sensor
-    client.post("/auth/register", json={"nombre": "Otra", "email": "otra@vinalert.dev", "password": "clave12345"})
+    registrar(client, "otra@vinalert.dev", nombre="Otra", password="clave12345")
     tok = client.post("/auth/token", data={"username": "otra@vinalert.dev", "password": "clave12345"}).json()["access_token"]
     otra_headers = {"Authorization": f"Bearer {tok}"}
     otra_pid = client.post("/parcelas/", json={"nombre": "Ajena"}, headers=otra_headers).json()["id"]

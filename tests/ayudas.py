@@ -1,6 +1,26 @@
 """Ayudas compartidas por los tests que necesitan datos de partida."""
 
 
+def registrar(client, email, nombre="Persona", password="clave12345"):
+    """
+    Crea una cuenta activa directamente en la BD del test. Las cuentas se dan
+    de alta por invitacion y ya no hay endpoint de registro, asi que los tests
+    que solo necesitan "un usuario que existe" lo crean aqui.
+    """
+    from app.auth import obtener_password_hash
+    from app.models import Usuario
+
+    usuario = Usuario(
+        nombre=nombre,
+        email=email.strip().lower(),
+        hashed_password=obtener_password_hash(password),
+        rol="agricultor",
+    )
+    client.db.add(usuario)
+    client.db.commit()
+    return usuario
+
+
 def alta_sensor(client, headers, parcela_id, etiqueta=None):
     """
     Da de alta el siguiente sensor de la parcela igual que la web: pidiendo a
