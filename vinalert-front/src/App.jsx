@@ -14,7 +14,10 @@ import Tratamientos from './pantallas/Tratamientos';
 import Foliar from './pantallas/Foliar';
 import Analisis from './pantallas/Analisis';
 import Administracion from './pantallas/Administracion';
+import Invitacion from './pantallas/Invitacion';
 import Login from './pantallas/Login';
+import Recuperar from './pantallas/Recuperar';
+import Restablecer from './pantallas/Restablecer';
 import Portada from './pantallas/Portada';
 import SeleccionParcela from './pantallas/SeleccionParcela';
 import MensajeError from './errores/MensajeError';
@@ -113,6 +116,9 @@ export default function App() {
         <ProveedorSesion>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/recuperar" element={<Recuperar />} />
+            <Route path="/restablecer" element={<Restablecer />} />
+            <Route path="/invitacion" element={<Invitacion />} />
             <Route path="/" element={<Inicio />} />
             <Route path="/parcelas" element={<RutaProtegida><Entrada /></RutaProtegida>} />
             <Route path="/admin" element={<RutaProtegida><Administracion /></RutaProtegida>} />

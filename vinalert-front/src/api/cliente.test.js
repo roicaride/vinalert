@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import cliente, { LLAVE_TOKEN, MOTIVO_CADUCADA, configurarSalidaDeSesion } from './cliente';
+import cliente, { LLAVE_TOKEN, MOTIVO_CADUCADA, configurarSalidaDeSesion, destinoSeguro } from './cliente';
 
 describe('cliente de API', () => {
   beforeEach(() => {
@@ -56,5 +56,48 @@ describe('cliente de API', () => {
 
     expect(localStorage.getItem(LLAVE_TOKEN)).toBe('valido');
     expect(espia).not.toHaveBeenCalled();
+  });
+
+  // Un 401 de las rutas de acceso (contraseña incorrecta, enlace caducado) no
+  // es una sesion caducada: lo explica la propia pantalla.
+  test.each(['/auth/token', '/auth/recuperar', '/auth/restablecer', '/auth/invitacion', '/auth/invitacion/aceptar'])(
+    'un 401 de %s no se trata como sesion caducada',
+    async (url) => {
+      localStorage.setItem(LLAVE_TOKEN, 'valido');
+      const espia = vi.fn();
+      configurarSalidaDeSesion(espia);
+      const alRechazar = cliente.interceptors.response.handlers[0].rejected;
+
+      await expect(alRechazar({ response: { status: 401 }, config: { url } })).rejects.toBeTruthy();
+
+      expect(localStorage.getItem(LLAVE_TOKEN)).toBe('valido');
+      expect(espia).not.toHaveBeenCalled();
+    },
+  );
+
+  test('sin sesion guardada, un 401 no dice que la sesion ha caducado', async () => {
+    const espia = vi.fn();
+    configurarSalidaDeSesion(espia);
+    const alRechazar = cliente.interceptors.response.handlers[0].rejected;
+
+    await expect(alRechazar({ response: { status: 401 }, config: { url: '/parcelas/' } })).rejects.toBeTruthy();
+
+    expect(espia).not.toHaveBeenCalled();
+  });
+});
+
+describe('destinoSeguro', () => {
+  test.each([
+    ['/p/1/estado', '/p/1/estado'],
+    ['/parcelas?x=1', '/parcelas?x=1'],
+    ['/login', '/'],
+    ['/login?motivo=sesion_caducada', '/'],
+    ['//evil.com', '/'],
+    ['https://evil.com', '/'],
+    ['/\\evil.com', '/'],
+    [null, '/'],
+    ['', '/'],
+  ])('%s -> %s', (entrada, salida) => {
+    expect(destinoSeguro(entrada)).toBe(salida);
   });
 });

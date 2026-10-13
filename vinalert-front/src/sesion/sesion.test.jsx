@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, expect, test, vi } from 'vitest';
 
@@ -68,12 +69,28 @@ test('no redirige mientras la sesion se esta resolviendo', async () => {
   expect(await screen.findByText('hola Test User')).toBeInTheDocument();
 });
 
-test('si /auth/me falla, limpia el token y manda al login', async () => {
+test('si /auth/me da 401, limpia el token y manda al login', async () => {
   localStorage.setItem(LLAVE_TOKEN, 'basura');
-  me.mockRejectedValue(new Error('401'));
+  me.mockRejectedValue({ response: { status: 401 } });
 
   montar();
 
   expect(await screen.findByText('pantalla de login')).toBeInTheDocument();
   await waitFor(() => expect(localStorage.getItem(LLAVE_TOKEN)).toBeNull());
+});
+
+// En el campo, con mala cobertura, abrir la app no puede costar la sesion.
+test('sin conexion conserva la sesion y deja reintentar', async () => {
+  localStorage.setItem(LLAVE_TOKEN, 'valido');
+  me.mockRejectedValueOnce({ request: {} }).mockResolvedValueOnce(USUARIO);
+
+  montar();
+
+  expect(await screen.findByText(/sin conexión/i)).toBeInTheDocument();
+  expect(localStorage.getItem(LLAVE_TOKEN)).toBe('valido');
+  expect(screen.queryByText('pantalla de login')).not.toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole('button', { name: /reintentar/i }));
+
+  expect(await screen.findByText('hola Test User')).toBeInTheDocument();
 });

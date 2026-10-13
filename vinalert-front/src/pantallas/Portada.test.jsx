@@ -29,24 +29,18 @@ test('sin sesion, la raiz ensena la portada y no el panel', async () => {
   expect(listarParcelas).not.toHaveBeenCalled();
 });
 
-test('arriba a la derecha estan iniciar sesion y crear cuenta, cada uno a su modo del login', async () => {
+test('arriba a la derecha estan iniciar sesion y solicitar acceso', async () => {
   render(<App />);
 
   const entrar = await screen.findAllByRole('link', { name: 'Iniciar sesión' });
   expect(entrar[0]).toHaveAttribute('href', '/login');
-  const crear = screen.getAllByRole('link', { name: 'Crear cuenta' });
-  expect(crear[0]).toHaveAttribute('href', '/login?modo=registro');
-});
-
-test('crear cuenta abre el login ya en modo registro', async () => {
-  window.history.replaceState({}, '', '/login?modo=registro');
-
-  render(<App />);
-
-  expect(
-    await screen.findByRole('heading', { name: /crear cuenta en viñalert/i }),
-  ).toBeInTheDocument();
-  expect(screen.getByLabelText('Nombre completo')).toBeInTheDocument();
+  // Las cuentas se dan de alta por invitacion: sin registro, se pide por email.
+  const solicitar = screen.getAllByRole('link', { name: 'Solicitar acceso' });
+  expect(solicitar.length).toBeGreaterThan(0);
+  for (const enlace of solicitar) {
+    expect(enlace.getAttribute('href')).toMatch(/^mailto:/);
+  }
+  expect(screen.queryByRole('link', { name: 'Crear cuenta' })).not.toBeInTheDocument();
 });
 
 test('con sesion, la raiz lleva al panel sin pasar por la portada', async () => {

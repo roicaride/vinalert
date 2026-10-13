@@ -21,9 +21,21 @@ export default function MensajeError({ error, textoNoEncontrado = 'No se ha enco
     texto = preferirDetalle && typeof detail === 'string' ? detail : textoNoEncontrado;
   } else if (status === 409) {
     texto = typeof detail === 'string' ? detail : 'La operacion entra en conflicto con el estado actual.';
+  } else if (status === 429) {
+    const minutos = detail?.minutos;
+    texto = minutos
+      ? `Demasiados intentos. Espera ${minutos} min y vuelve a probar.`
+      : 'Demasiados intentos. Espera un rato y vuelve a probar.';
   } else if (status === 422) {
     if (Array.isArray(detail)) {
-      const campos = detail.map((d) => `${d.loc?.[d.loc.length - 1]}: ${d.msg}`);
+      // Los validadores propios del backend (politica de contraseñas) ya
+      // escriben el mensaje para el usuario: se muestra tal cual, sin el
+      // prefijo de pydantic ni el nombre del campo.
+      const campos = detail.map((d) =>
+        typeof d.msg === 'string' && d.msg.startsWith('Value error, ')
+          ? d.msg.slice('Value error, '.length)
+          : `${d.loc?.[d.loc.length - 1]}: ${d.msg}`,
+      );
       texto = campos.length ? campos.join(' · ') : 'Hay datos que no son validos.';
     } else if (typeof detail === 'string') {
       texto = detail;

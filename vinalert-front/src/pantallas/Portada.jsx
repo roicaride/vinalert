@@ -70,6 +70,8 @@ export default function Portada() {
   const [codigo, t, cambiarIdioma] = useIdioma();
   const hora = useHora();
   const correo = `mailto:${CORREO_CONTACTO}?subject=${encodeURIComponent(t.contacto.asunto)}`;
+  // Las cuentas se dan de alta por invitacion: quien no tiene una la pide.
+  const solicitar = `mailto:${CORREO_CONTACTO}?subject=${encodeURIComponent(t.nav.asuntoAcceso)}`;
 
   const nodos = [
     { id: 'N-01', valor: t.portada.online, tinta: 'text-brote', tono: 'brote' },
@@ -125,9 +127,9 @@ export default function Portada() {
             {/* El hidden va en un envoltorio: en el propio enlace chocaria con el
                 inline-flex de claseBoton y ganaria el que la hoja pone despues. */}
             <span className="hidden sm:flex">
-              <Link to="/login?modo=registro" className={claseBoton('fantasma')}>
+              <a href={solicitar} className={claseBoton('fantasma')}>
                 {t.nav.crear}
-              </Link>
+              </a>
             </span>
           </div>
         </div>
@@ -145,9 +147,9 @@ export default function Portada() {
             </h1>
             <p className="mt-8 max-w-xl text-lg leading-relaxed text-oso-2">{t.portada.texto}</p>
             <div className="mt-10 flex flex-wrap gap-3">
-              <Link to="/login?modo=registro" className={claseBoton('solido', 'lg')}>
+              <a href={solicitar} className={claseBoton('solido', 'lg')}>
                 {t.nav.crear}
-              </Link>
+              </a>
               <a href={correo} className={claseBoton('fantasma', 'lg')}>
                 {t.portada.demo}
               </a>
@@ -307,9 +309,9 @@ export default function Portada() {
           <Link to="/login" className="rotulo text-oso-3 hover:text-brote">
             {t.nav.entrar}
           </Link>
-          <Link to="/login?modo=registro" className="rotulo text-oso-3 hover:text-brote">
+          <a href={solicitar} className="rotulo text-oso-3 hover:text-brote">
             {t.nav.crear}
-          </Link>
+          </a>
         </div>
       </footer>
     </div>

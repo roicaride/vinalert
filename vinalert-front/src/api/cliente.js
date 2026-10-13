@@ -11,6 +11,26 @@ export const sesion = {
   limpiar: () => localStorage.removeItem(LLAVE_TOKEN),
 };
 
+/**
+ * A donde volver tras entrar. Solo rutas internas: "//otro.com" o
+ * "https://..." llevarian fuera de la app, y "/login" dejaria al usuario en
+ * el formulario despues de haber entrado.
+ */
+export function destinoSeguro(valor) {
+  if (typeof valor !== 'string' || !valor.startsWith('/')) return '/';
+  if (valor.startsWith('//') || valor.startsWith('/\\')) return '/';
+  if (valor === '/login' || valor.startsWith('/login?') || valor.startsWith('/login/')) return '/';
+  return valor;
+}
+
+// Rutas donde un 401 es la respuesta normal de un formulario (contraseña
+// incorrecta, enlace caducado) y no una sesion caducada.
+const RUTAS_DE_ACCESO = ['/auth/token', '/auth/recuperar', '/auth/restablecer', '/auth/invitacion'];
+
+function esRutaDeAcceso(url = '') {
+  return RUTAS_DE_ACCESO.some((r) => url === r || url.startsWith(`${r}/`) || url.startsWith(`${r}?`));
+}
+
 let alPerderSesion = null;
 
 /**
@@ -39,7 +59,11 @@ cliente.interceptors.request.use((config) => {
 cliente.interceptors.response.use(
   (respuesta) => respuesta,
   (error) => {
-    if (error.response?.status === 401) {
+    const caducada =
+      error.response?.status === 401 &&
+      Boolean(sesion.leerToken()) &&
+      !esRutaDeAcceso(error.config?.url);
+    if (caducada) {
       sesion.limpiar();
       const destino = window.location.pathname + window.location.search;
       if (alPerderSesion) {

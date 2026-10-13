@@ -1,23 +1,18 @@
 import { useState } from 'react';
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
-import { login, me, registro } from '../api/auth';
-import { MOTIVO_CADUCADA } from '../api/cliente';
+import { login, me } from '../api/auth';
+import { MOTIVO_CADUCADA, destinoSeguro } from '../api/cliente';
 import MensajeError from '../errores/MensajeError';
-import { CuadroMarca, Marca } from '../marca/Marca';
-import { SECCIONES } from '../secciones';
 import { useSesion } from '../sesion/SesionContext';
-import Boton, { Enlace } from '../ui/Boton';
+import Boton from '../ui/Boton';
 import Campo from '../ui/Campo';
 import { Aviso } from '../ui/Estados';
+import MarcoAcceso, { EnlaceAcceso } from './acceso/MarcoAcceso';
 
 /**
- * La puerta.
- *
- * Es la unica pantalla sin datos, asi que es donde la marca puede hablar sin
- * quitarle sitio a nada: el simbolo grande a la izquierda y, debajo, la lista
- * de lo que hay dentro. Esa lista sale de SECCIONES —la misma fuente que la
- * navegacion— para que nunca prometa una pantalla que no existe.
+ * Entrar. Las cuentas se dan de alta por invitacion, asi que aqui no hay
+ * registro: quien no tiene cuenta la pide desde la portada.
  */
 export default function Login() {
   const navigate = useNavigate();
@@ -25,25 +20,19 @@ export default function Login() {
   const [params] = useSearchParams();
   const { setUsuario } = useSesion();
 
-  // «Crear cuenta» en la portada llega con ?modo=registro.
-  const [modo, setModo] = useState(params.get('modo') === 'registro' ? 'registro' : 'login');
-  const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
 
   const caducada = params.get('motivo') === MOTIVO_CADUCADA;
-  const destino = params.get('destino') || location.state?.destino || '/';
+  const destino = destinoSeguro(params.get('destino') || location.state?.destino);
 
   const enviar = async (e) => {
     e.preventDefault();
     setError(null);
     setEnviando(true);
     try {
-      if (modo === 'registro') {
-        await registro({ nombre, email, password });
-      }
       await login(email, password);
       setUsuario(await me());
       navigate(destino, { replace: true });
@@ -54,144 +43,60 @@ export default function Login() {
     }
   };
 
+  const status = error?.response?.status;
+
   return (
-    <div className="grid min-h-screen bg-linea md:grid-cols-[1.15fr_1fr] md:gap-px">
-      {/* ------------------------------------------------------------------ */}
-      {/* La marca. Lo unico que se ve antes de entrar.                       */}
-      {/* ------------------------------------------------------------------ */}
-      <section className="flex flex-col justify-between gap-10 bg-lousa px-8 py-10 md:px-12 md:py-14">
-        <Link to="/" className="flex w-fit items-center gap-3">
-          <CuadroMarca lado={34} tinta="bg-oso" />
-          <span className="font-mono text-lg font-medium tracking-[0.06em] text-oso">Viñalert</span>
-        </Link>
+    <MarcoAcceso rotulo="Acceso" titulo="Acceso a Viñalert">
+      {caducada && !error && (
+        <Aviso tono="ambar" className="mt-4">
+          Tu sesión ha caducado. Vuelve a entrar y seguimos donde estabas.
+        </Aviso>
+      )}
 
-        <div className="max-w-lg">
-          <p className="rotulo">Sensores en campo</p>
-          <h2 className="mt-4 font-mono text-3xl leading-[1.15] font-medium tracking-[-0.02em] text-oso md:text-[2.6rem]">
-            Lo que el suelo está haciendo ahora mismo.
-          </h2>
-          <p className="mt-5 max-w-md text-sm leading-relaxed text-oso-2">
-            Humedad y temperatura del suelo, el clima de la parcela y el cuaderno de tratamientos,
-            en la misma pantalla y con la misma hora.
-          </p>
-        </div>
+      <form className="mt-7 space-y-5" onSubmit={enviar}>
+        <Campo
+          etiqueta="Email"
+          id="email"
+          type="email"
+          autoComplete="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="tu@email.com"
+        />
 
-        <div className="border-t border-linea pt-5">
-          <ul className="flex flex-wrap gap-x-5 gap-y-2">
-            {SECCIONES.map((s) => (
-              <li key={s.ruta} className="rotulo flex items-center gap-2 text-oso-3">
-                <Marca alto={9} className="text-vina" />
-                {s.etiqueta}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+        <Campo
+          etiqueta="Contraseña"
+          id="password"
+          type="password"
+          autoComplete="current-password"
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="••••••••"
+        />
 
-      {/* ------------------------------------------------------------------ */}
-      {/* El formulario.                                                      */}
-      {/* ------------------------------------------------------------------ */}
-      <section className="flex items-center justify-center bg-lousa px-6 py-10 md:px-10">
-        <div className="w-full max-w-sm">
-          <p className="rotulo">{modo === 'login' ? 'Acceso' : 'Registro'}</p>
-          <h1 className="mt-3 font-mono text-xl font-medium tracking-[-0.01em] text-oso">
-            {modo === 'login' ? 'Acceso a Viñalert' : 'Crear cuenta en Viñalert'}
-          </h1>
+        {status === 401 ? (
+          <Aviso tono="sangre" role="alert">
+            Email o contraseña incorrectos.
+          </Aviso>
+        ) : status === 429 ? (
+          <Aviso tono="ambar" role="alert">
+            Demasiados intentos. Espera {error.response.data?.detail?.minutos ?? 15} min o{' '}
+            <EnlaceAcceso to="/recuperar">recupera tu contraseña</EnlaceAcceso>.
+          </Aviso>
+        ) : (
+          <MensajeError error={error} />
+        )}
 
-          {caducada && (
-            <Aviso tono="ambar" className="mt-4">
-              Tu sesión ha caducado. Vuelve a entrar y seguimos donde estabas.
-            </Aviso>
-          )}
+        <Boton tono="solido" type="submit" disabled={enviando} className="w-full">
+          {enviando ? 'Iniciando sesión…' : 'Iniciar sesión'}
+        </Boton>
+      </form>
 
-          <form className="mt-7 space-y-5" onSubmit={enviar}>
-            {modo === 'registro' && (
-              <Campo
-                etiqueta="Nombre completo"
-                id="nombre"
-                type="text"
-                required
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
-                placeholder="Ej. Roi González"
-              />
-            )}
-
-            <Campo
-              etiqueta="Email"
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="tu@email.com"
-            />
-
-            <Campo
-              etiqueta="Contraseña"
-              id="password"
-              type="password"
-              required
-              minLength={modo === 'registro' ? 8 : undefined}
-              ayuda={modo === 'registro' ? 'Mínimo 8 caracteres.' : undefined}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-            />
-
-            {/* Los dos rechazos del registro que tiene sentido explicar: el
-                email repetido (400) y los datos que no pasan la validacion
-                (422, que el backend describe en ingles y campo a campo). */}
-            {modo === 'registro' && error?.response?.status === 400 ? (
-              <Aviso tono="ambar" role="alert">
-                Ya hay una cuenta con ese email.{' '}
-                <button
-                  type="button"
-                  onClick={() => { setModo('login'); setError(null); }}
-                  className="underline underline-offset-2 hover:text-oso"
-                >
-                  Inicia sesión con ella
-                </button>
-                .
-              </Aviso>
-            ) : modo === 'registro' && error?.response?.status === 422 ? (
-              <Aviso tono="sangre" role="alert">
-                Revisa el email y que la contraseña tenga al menos 8 caracteres.
-              </Aviso>
-            ) : (
-              <MensajeError
-                error={error}
-                textoNoEncontrado={
-                  modo === 'login'
-                    ? 'Email o contraseña incorrectos.'
-                    : 'No se pudo crear la cuenta.'
-                }
-              />
-            )}
-
-            <Boton tono="solido" type="submit" disabled={enviando} className="w-full">
-              {enviando
-                ? modo === 'login'
-                  ? 'Iniciando sesión…'
-                  : 'Creando cuenta…'
-                : modo === 'login'
-                  ? 'Iniciar sesión'
-                  : 'Crear cuenta'}
-            </Boton>
-          </form>
-
-          <div className="mt-7 border-t border-linea pt-5">
-            <Enlace
-              onClick={() => {
-                setModo(modo === 'login' ? 'registro' : 'login');
-                setError(null);
-              }}
-            >
-              {modo === 'login' ? 'Crear una cuenta' : 'Ya tengo cuenta'}
-            </Enlace>
-          </div>
-        </div>
-      </section>
-    </div>
+      <div className="mt-7 border-t border-linea pt-5">
+        <EnlaceAcceso to="/recuperar">¿Has olvidado tu contraseña?</EnlaceAcceso>
+      </div>
+    </MarcoAcceso>
   );
 }
