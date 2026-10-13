@@ -11,9 +11,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from .database import Base, engine
 from .routers import admin, auth, clima_fetch, dispositivos, foliar, logs, miembros, parcelas, sensores, tratamientos
 from .services.clima_scheduler import refrescar_clima_todas_parcelas
+from .services import correo
 from .services.consolidacion import consolidar_todas_parcelas
 
 load_dotenv()
+correo.validar_configuracion()
 
 scheduler = BackgroundScheduler()
 
