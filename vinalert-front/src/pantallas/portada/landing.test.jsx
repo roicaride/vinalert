@@ -45,6 +45,9 @@ test('hay una sola llamada a la accion de contacto: solicitar una demostracion',
 test('la trayectoria cuenta la instalacion, el premio y el programa', async () => {
   await abrir();
   const banda = screen.getByRole('region', { name: 'Trayectoria' });
+  // Lo que importa es que ya hay un cliente; las cifras van como detalle.
+  expect(within(banda).getAllByRole('heading', { level: 3 })[0]).toHaveTextContent(/ya en uso/i);
+  expect(within(banda).getByText(/centro de investigación de una universidad pública/)).toBeInTheDocument();
   expect(within(banda).getByText(/18 sensores/)).toBeInTheDocument();
   expect(within(banda).getByText(/Semente Ribeira Sacra/)).toBeInTheDocument();
   expect(within(banda).getByText(/Incuba Emprende/)).toBeInTheDocument();
@@ -62,8 +65,20 @@ test('el equipo son los tres cofundadores, con su LinkedIn', async () => {
   expect(within(equipo).queryByText(/\[Nombre/)).not.toBeInTheDocument();
 });
 
-test('la ficha tecnica dice como se accede y de donde salen los mapas', async () => {
+test('la ficha tecnica cuenta lo que hace el equipo, no a que proveedores llama', async () => {
   await abrir();
-  expect(screen.getByText('Por invitación')).toBeInTheDocument();
-  expect(screen.getByText(/IGN · PNOA/)).toBeInTheDocument();
+  const ficha = screen.getByRole('region', { name: TEXTOS.es.ficha.titulo });
+  expect(within(ficha).getByText(/por invitación/i)).toBeInTheDocument();
+  expect(within(ficha).getByText(/sin cobertura/i)).toBeInTheDocument();
+  for (const proveedor of [/open-meteo/i, /IGN/, /PNOA/]) {
+    expect(within(ficha).queryByText(proveedor)).not.toBeInTheDocument();
+  }
+});
+
+test.each(['es', 'gl', 'en'])('en %s la landing no nombra proveedores de datos', (idioma) => {
+  const t = TEXTOS[idioma];
+  const visible = JSON.stringify([t.portada, t.trayectoria, t.como, t.ofrecemos, t.ficha]).toLowerCase();
+  for (const proveedor of ['open-meteo', 'pnoa', 'ign ']) {
+    expect(visible).not.toContain(proveedor);
+  }
 });

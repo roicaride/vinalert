@@ -7,8 +7,10 @@
  * Todo lo que se afirma aqui sobre el producto tiene que ser cierto hoy: sale
  * del README y del firmware (LoRa a 868 MHz, nodos solares, bufer en flash,
  * intervalo de 5 min a 24 h, permisos de gestion y lectura por parcela, alta
- * por invitacion, mapas del IGN). La logica de riego se retiro en septiembre
- * de 2026: no se promete. Si cambia el producto, cambia aqui (lo vigila
+ * por invitacion). La logica de riego se retiro en septiembre de 2026: no se
+ * promete. No se nombran proveedores de datos (clima, mapas): se cuenta lo que
+ * gana quien lo usa; las atribuciones que exigen sus licencias van en el aviso
+ * legal y junto a los propios datos. Si cambia el producto, cambia aqui (lo vigila
  * portada/landing.test.jsx).
  */
 
@@ -79,9 +81,9 @@ export const TEXTOS = {
     trayectoria: {
       rotulo: 'Trayectoria',
       items: [
-        { cifra: '18 sensores', texto: 'y 7 nodos en el centro de investigación de una universidad pública: nuestra primera instalación.' },
-        { cifra: '5.000 €', texto: 'del premio Semente Ribeira Sacra, que ganamos tras ser finalistas dos veces.' },
-        { cifra: 'Incuba Emprende', texto: 'nos acompaña con su programa de mentoring para proyectos emprendedores.' },
+        { titulo: 'Ya en uso', texto: 'Primera instalación en el centro de investigación de una universidad pública.', detalle: '7 nodos · 18 sensores' },
+        { titulo: 'Semente Ribeira Sacra', texto: 'Ganadores del premio, tras ser finalistas dos veces.', detalle: '5.000 €' },
+        { titulo: 'Incuba Emprende', texto: 'Nos acompaña con su programa de mentoring para proyectos emprendedores.' },
       ],
     },
     como: {
@@ -117,7 +119,7 @@ export const TEXTOS = {
         { titulo: 'Mediciones foliares', texto: 'Sube el Excel del Dualex: clorofila, flavonoles y balance de nitrógeno.' },
         { titulo: 'Análisis', texto: 'Series temporales que cruzan suelo, clima, hoja y tratamientos en el mismo eje.' },
         { titulo: 'Acceso por invitación', texto: 'Cada persona entra invitada por quien gestiona la parcela, con permiso de gestión o de lectura.' },
-        { titulo: 'Mapa de la parcela', texto: 'Cada nodo sobre la ortofoto del PNOA, con su estado y su última lectura.' },
+        { titulo: 'Mapa de la parcela', texto: 'Cada nodo sobre la foto aérea de la parcela, con su estado y su última lectura.' },
         { titulo: 'Dispositivos', texto: 'Alta de nodos y cambio del intervalo de medida desde la web, y aviso cuando un nodo deja de enviar.' },
       ],
     },
@@ -125,14 +127,12 @@ export const TEXTOS = {
       rotulo: 'Ficha técnica',
       titulo: 'Lo que hay dentro.',
       filas: [
-        ['Radio', 'LoRa · 868 MHz'],
+        ['Radio', 'LoRa 868 MHz, sin cobertura móvil'],
         ['Sondas', 'RS-485 · Modbus'],
-        ['Alimentación', 'Solar'],
-        ['Intervalo de medida', 'De 5 min a 24 h'],
-        ['Datos climáticos', 'Open-Meteo'],
-        ['Cartografía', 'IGN · PNOA'],
-        ['Acceso', 'Por invitación'],
-        ['Permisos', 'Gestión o lectura, por parcela'],
+        ['Alimentación', 'Solar, sin cables'],
+        ['Sin conexión', 'Guarda las lecturas y las envía después'],
+        ['Intervalo de medida', 'De 5 min a 24 h, desde la web'],
+        ['Acceso', 'Por invitación, con permisos por parcela'],
         ['Exportación', 'Excel · CSV'],
       ],
     },
@@ -188,9 +188,9 @@ export const TEXTOS = {
     trayectoria: {
       rotulo: 'Traxectoria',
       items: [
-        { cifra: '18 sensores', texto: 'e 7 nodos no centro de investigación dunha universidade pública: a nosa primeira instalación.' },
-        { cifra: '5.000 €', texto: 'do premio Semente Ribeira Sacra, que gañamos despois de ser finalistas dúas veces.' },
-        { cifra: 'Incuba Emprende', texto: 'acompáñanos co seu programa de mentoring para proxectos emprendedores.' },
+        { titulo: 'Xa en uso', texto: 'Primeira instalación no centro de investigación dunha universidade pública.', detalle: '7 nodos · 18 sensores' },
+        { titulo: 'Semente Ribeira Sacra', texto: 'Gañadores do premio, despois de ser finalistas dúas veces.', detalle: '5.000 €' },
+        { titulo: 'Incuba Emprende', texto: 'Acompáñanos co seu programa de mentoring para proxectos emprendedores.' },
       ],
     },
     como: {
@@ -226,7 +226,7 @@ export const TEXTOS = {
         { titulo: 'Medicións foliares', texto: 'Sobe o Excel do Dualex: clorofila, flavonoles e balance de nitróxeno.' },
         { titulo: 'Análise', texto: 'Series temporais que cruzan chan, clima, folla e tratamentos no mesmo eixe.' },
         { titulo: 'Acceso por invitación', texto: 'Cada persoa entra invitada por quen xestiona a parcela, con permiso de xestión ou de lectura.' },
-        { titulo: 'Mapa da parcela', texto: 'Cada nodo sobre a ortofoto do PNOA, co seu estado e a súa última lectura.' },
+        { titulo: 'Mapa da parcela', texto: 'Cada nodo sobre a foto aérea da parcela, co seu estado e a súa última lectura.' },
         { titulo: 'Dispositivos', texto: 'Alta de nodos e cambio do intervalo de medida desde a web, e aviso cando un nodo deixa de enviar.' },
       ],
     },
@@ -234,14 +234,12 @@ export const TEXTOS = {
       rotulo: 'Ficha técnica',
       titulo: 'O que hai dentro.',
       filas: [
-        ['Radio', 'LoRa · 868 MHz'],
+        ['Radio', 'LoRa 868 MHz, sen cobertura móbil'],
         ['Sondas', 'RS-485 · Modbus'],
-        ['Alimentación', 'Solar'],
-        ['Intervalo de medida', 'De 5 min a 24 h'],
-        ['Datos climáticos', 'Open-Meteo'],
-        ['Cartografía', 'IGN · PNOA'],
-        ['Acceso', 'Por invitación'],
-        ['Permisos', 'Xestión ou lectura, por parcela'],
+        ['Alimentación', 'Solar, sen cables'],
+        ['Sen conexión', 'Garda as lecturas e envíaas despois'],
+        ['Intervalo de medida', 'De 5 min a 24 h, desde a web'],
+        ['Acceso', 'Por invitación, con permisos por parcela'],
         ['Exportación', 'Excel · CSV'],
       ],
     },
@@ -297,9 +295,9 @@ export const TEXTOS = {
     trayectoria: {
       rotulo: 'Track record',
       items: [
-        { cifra: '18 sensors', texto: 'and 7 nodes at a public university research centre: our first installation.' },
-        { cifra: '€5,000', texto: 'from the Semente Ribeira Sacra award, which we won after being finalists twice.' },
-        { cifra: 'Incuba Emprende', texto: 'supports us through its mentoring programme for new ventures.' },
+        { titulo: 'Already in use', texto: 'First installation at a public university research centre.', detalle: '7 nodes · 18 sensors' },
+        { titulo: 'Semente Ribeira Sacra', texto: 'Winners of the award, after being finalists twice.', detalle: '€5,000' },
+        { titulo: 'Incuba Emprende', texto: 'Supports us through its mentoring programme for new ventures.' },
       ],
     },
     como: {
@@ -335,7 +333,7 @@ export const TEXTOS = {
         { titulo: 'Foliar measurements', texto: 'Upload the Dualex spreadsheet: chlorophyll, flavonols and nitrogen balance.' },
         { titulo: 'Analysis', texto: 'Time series that overlay soil, weather, leaf and treatments on the same axis.' },
         { titulo: 'Invitation-only access', texto: 'Each person joins by invitation from whoever manages the plot, with manage or read-only permission.' },
-        { titulo: 'Plot map', texto: 'Every node on the PNOA orthophoto, with its status and its latest reading.' },
+        { titulo: 'Plot map', texto: 'Every node on an aerial photo of the plot, with its status and its latest reading.' },
         { titulo: 'Devices', texto: 'Add nodes and change the sampling interval from the web, and get warned when a node stops reporting.' },
       ],
     },
@@ -343,14 +341,12 @@ export const TEXTOS = {
       rotulo: 'Technical sheet',
       titulo: 'What’s inside.',
       filas: [
-        ['Radio', 'LoRa · 868 MHz'],
+        ['Radio', 'LoRa 868 MHz, no mobile coverage needed'],
         ['Probes', 'RS-485 · Modbus'],
-        ['Power', 'Solar'],
-        ['Sampling interval', '5 min to 24 h'],
-        ['Weather data', 'Open-Meteo'],
-        ['Maps', 'IGN · PNOA'],
-        ['Access', 'By invitation'],
-        ['Permissions', 'Manage or read, per plot'],
+        ['Power', 'Solar, no cables'],
+        ['Offline', 'Stores readings and sends them later'],
+        ['Sampling interval', '5 min to 24 h, set from the web'],
+        ['Access', 'By invitation, with per-plot permissions'],
         ['Export', 'Excel · CSV'],
       ],
     },

@@ -180,11 +180,12 @@ export default function Portada() {
         <section aria-label={t.trayectoria.rotulo} className="border-b border-linea">
           <Rejilla cols="md:grid-cols-3">
             {t.trayectoria.items.map((item) => (
-              <div key={item.cifra} className={`bg-lousa ${ANCHO} py-10 md:px-8`}>
-                <p className="font-mono text-3xl leading-none font-medium tracking-[-0.02em] text-brote md:text-4xl">
-                  {item.cifra}
-                </p>
-                <p className="mt-4 max-w-xs text-sm leading-relaxed text-oso-2">{item.texto}</p>
+              <div key={item.titulo} className={`flex flex-col bg-lousa ${ANCHO} py-10 md:px-8`}>
+                <h3 className="font-mono text-2xl leading-tight font-medium tracking-[-0.02em] text-brote md:text-3xl">
+                  {item.titulo}
+                </h3>
+                <p className="mt-4 max-w-xs flex-1 text-sm leading-relaxed text-oso-2">{item.texto}</p>
+                {item.detalle && <p className="mt-5 font-mono text-xs tabular-nums text-oso-3">{item.detalle}</p>}
               </div>
             ))}
           </Rejilla>
@@ -236,7 +237,7 @@ export default function Portada() {
         {/* ---------------------------------------------------------------- */}
         {/* Ficha tecnica: la marca grande a un lado, los datos al otro.      */}
         {/* ---------------------------------------------------------------- */}
-        <section className="grid gap-px border-b border-linea bg-linea md:grid-cols-2">
+        <section aria-label={t.ficha.titulo} className="grid gap-px border-b border-linea bg-linea md:grid-cols-2">
           <div className={`flex flex-col justify-between gap-12 bg-lousa ${ANCHO} py-12 md:py-16`}>
             <div>
               <p className="rotulo">{t.ficha.rotulo}</p>
