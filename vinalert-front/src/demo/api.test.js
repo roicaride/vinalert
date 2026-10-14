@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'vitest';
 
 import datos from './datos.json';
-import { desplazarFechas, reiniciarDemo, responder } from './api';
+import { ahoraMadrid, desplazarFechas, reiniciarDemo, responder } from './api';
 
 const PID = datos.parcelaId;
 
@@ -38,21 +38,21 @@ describe('la parcela de ejemplo', () => {
     expect(data.at(-1)).toEqual(todas.at(-1));
     const tiempos = data.map((l) => new Date(l.fecha_hora).getTime());
     expect([...tiempos].sort((a, b) => a - b)).toEqual(tiempos);
-    for (const t of tiempos) expect(t).toBeLessThanOrEqual(Date.now());
-    expect(Date.now() - tiempos.at(-1)).toBeLessThan(26 * 3600 * 1000);
+    for (const t of tiempos) expect(t).toBeLessThanOrEqual(ahoraMadrid());
+    expect(ahoraMadrid() - tiempos.at(-1)).toBeLessThan(26 * 3600 * 1000);
   });
 
   test('el clima y el suelo diario no llegan mas alla de hoy', async () => {
-    const hoy = new Date().toISOString().slice(0, 10);
+    const hoy = new Date(ahoraMadrid()).toLocaleDateString('sv-SE');
     const { data: dash } = await pedir('get', `/parcelas/${PID}/dashboard`);
-    expect(new Date(dash.clima_actual.fecha_hora).getTime()).toBeLessThanOrEqual(Date.now());
+    expect(new Date(dash.clima_actual.fecha_hora).getTime()).toBeLessThanOrEqual(ahoraMadrid());
     const { data: suelo } = await pedir('get', `/parcelas/${PID}/suelo/diario`, { params: { dias: 365 } });
     for (const f of suelo) expect(f.fecha <= hoy).toBe(true);
   });
 
   test('el historico respeta la ventana de horas', async () => {
     const { data } = await pedir('get', `/parcelas/${PID}/historico`, { params: { limite: 2000, horas: 48 } });
-    const limite = Date.now() - 48 * 3600 * 1000;
+    const limite = ahoraMadrid() - 48 * 3600 * 1000;
     expect(data.length).toBeGreaterThan(0);
     for (const l of data) expect(new Date(l.fecha_hora).getTime()).toBeGreaterThanOrEqual(limite);
   });
@@ -104,5 +104,15 @@ describe('la parcela de ejemplo', () => {
 
   test('una ruta desconocida da 404, no un error de JavaScript', async () => {
     await expect(pedir('get', '/no/existe')).rejects.toMatchObject({ response: { status: 404 } });
+  });
+});
+
+describe('ahoraMadrid', () => {
+  test('es la hora de pared de Madrid, este donde este el navegador', () => {
+    const madrid = new Intl.DateTimeFormat('sv-SE', {
+      timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hour12: false,
+    }).format(new Date());
+    const local = new Date(ahoraMadrid()).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+    expect(local).toBe(madrid);
   });
 });

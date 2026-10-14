@@ -18,6 +18,23 @@ export const PARCELA_DEMO = PID;
 const DIA_MS = 24 * 3600 * 1000;
 const FECHA = /^(\d{4})-(\d{2})-(\d{2})(T[\d:.]+)?$/;
 
+/**
+ * La hora de pared de Madrid, como milisegundos de una fecha "local". Las
+ * horas de la API son de Madrid sin zona (y el navegador las lee como
+ * locales), asi que para compararlas hay que usar el reloj de Madrid, no el
+ * del visitante: desde Dublin o Lisboa, si no, la ultima lectura quedaria una
+ * hora en el futuro.
+ */
+export function ahoraMadrid() {
+  const partes = Object.fromEntries(
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+    }).formatToParts(new Date()).map((p) => [p.type, p.value]),
+  );
+  return new Date(`${partes.year}-${partes.month}-${partes.day}T${partes.hour}:${partes.minute}:${partes.second}`).getTime();
+}
+
 /** Suma `dias` a cada fecha ("2026-10-14") o fecha con hora que encuentre, en cualquier profundidad. */
 export function desplazarFechas(valor, dias) {
   if (typeof valor === 'string') {
@@ -43,8 +60,9 @@ function diasDeDesplazamiento() {
   // El historico viene como lo da el backend: las mas recientes, en orden
   // cronologico ascendente. La ultima es la mas nueva.
   const ultima = new Date(datos.respuestas.historico.at(-1).fecha_hora).getTime();
-  let dias = Math.round((Date.now() - ultima) / DIA_MS);
-  if (ultima + dias * DIA_MS > Date.now()) dias -= 1;
+  const ahora = ahoraMadrid();
+  let dias = Math.round((ahora - ultima) / DIA_MS);
+  if (ultima + dias * DIA_MS > ahora) dias -= 1;
   return dias;
 }
 
@@ -82,13 +100,13 @@ function cuerpo(config) {
 }
 
 function hoyIso() {
-  const h = new Date();
+  const h = new Date(ahoraMadrid());
   const dos = (n) => String(n).padStart(2, '0');
   return `${h.getFullYear()}-${dos(h.getMonth() + 1)}-${dos(h.getDate())}`;
 }
 
 function haceDias(dias) {
-  const d = new Date(Date.now() - dias * DIA_MS);
+  const d = new Date(ahoraMadrid() - dias * DIA_MS);
   const dos = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${dos(d.getMonth() + 1)}-${dos(d.getDate())}`;
 }
@@ -108,7 +126,7 @@ const RUTAS = [
     const { limite = 15, horas } = c.params ?? {};
     let filas = estado.historico;
     if (horas != null) {
-      const desde = Date.now() - Number(horas) * 3600 * 1000;
+      const desde = ahoraMadrid() - Number(horas) * 3600 * 1000;
       filas = filas.filter((l) => new Date(l.fecha_hora).getTime() >= desde);
     }
     // Las `limite` mas recientes, en orden ascendente, como el backend.
