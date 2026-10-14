@@ -1,5 +1,6 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 
+import BandaDemo from '../demo/BandaDemo';
 import { Firma } from '../marca/Marca';
 import { useSesion } from '../sesion/SesionContext';
 import { Enlace } from '../ui/Boton';
@@ -21,6 +22,8 @@ export default function CabeceraCuenta() {
     }`;
 
   return (
+    <>
+    <BandaDemo />
     <header className="flex shrink-0 flex-wrap items-stretch justify-between border-b border-linea">
       <div className="flex items-stretch">
         <Link to="/" className="flex items-center border-r border-linea px-5 py-3">
@@ -53,5 +56,6 @@ export default function CabeceraCuenta() {
         </div>
       </div>
     </header>
+    </>
   );
 }

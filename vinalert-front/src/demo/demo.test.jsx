@@ -65,3 +65,38 @@ test('la banda ofrece pedir una demostracion de verdad', async () => {
   const pedir = await screen.findByRole('link', { name: 'Solicitar una demostración' });
   expect(pedir.getAttribute('href')).toMatch(/^mailto:hortalert@gmail\.com\?subject=/);
 });
+
+// Lo que haria un visitante: anotar un tratamiento y verlo en el cuaderno.
+test('en el ejemplo se registra un tratamiento desde el formulario y aparece en el cuaderno', async () => {
+  abrir('/demo');
+  await screen.findByText(/parcela de ejemplo con datos inventados/i);
+  window.history.pushState({}, '', `/p/${datos.parcelaId}/tratamientos`);
+  fireEvent(window, new PopStateEvent('popstate'));
+
+  fireEvent.change(await screen.findByLabelText('Fecha'), { target: { value: '2026-10-14T09:30' } });
+  fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'Fungicida' } });
+  fireEvent.change(screen.getByLabelText('Producto'), { target: { value: 'Producto de prueba' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Registrar tratamiento' }));
+
+  expect(await screen.findByText('Producto de prueba')).toBeInTheDocument();
+});
+
+test('al recargar el ejemplo, lo anotado desaparece', async () => {
+  const { unmount } = abrir('/demo');
+  await screen.findByText(/parcela de ejemplo con datos inventados/i);
+  unmount();
+  abrir('/demo');
+  window.history.pushState({}, '', `/p/${datos.parcelaId}/tratamientos`);
+  fireEvent(window, new PopStateEvent('popstate'));
+  await screen.findByText(/registrar una aplicación/i);
+  expect(screen.queryByText('Producto de prueba')).not.toBeInTheDocument();
+});
+
+test('la banda del ejemplo sigue visible en Mi cuenta', async () => {
+  abrir('/demo');
+  await screen.findByText(/parcela de ejemplo con datos inventados/i);
+  window.history.pushState({}, '', '/cuenta');
+  fireEvent(window, new PopStateEvent('popstate'));
+  await screen.findByRole('heading', { name: 'Mi cuenta' });
+  expect(screen.getByText(/parcela de ejemplo con datos inventados/i)).toBeInTheDocument();
+});

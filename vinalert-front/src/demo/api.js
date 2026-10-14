@@ -4,11 +4,13 @@ import datos from './datos.json';
  * La API de la parcela de ejemplo, dentro del navegador.
  *
  * Mientras dura la demo, el cliente HTTP responde desde aqui en vez de llamar
- * al servidor (ver api/cliente.js). Los datos son respuestas reales de la API
- * capturadas por scripts/generar_demo.py; aqui solo se desplazan las fechas
- * para que parezcan recientes, se recortan segun lo que pida cada pantalla y
- * se guardan en memoria los cambios del visitante. Nada sale del navegador y
- * al recargar todo vuelve a como estaba.
+ * al servidor (ver api/cliente.js). Los datos son fijos (datos.json, una viña
+ * inventada) y no dependen de ninguna API: siempre son los mismos valores. Aqui
+ * solo se desplazan las fechas para que la ultima lectura sea de hoy, se
+ * recortan segun lo que pida cada pantalla y se guardan en memoria los cambios
+ * del visitante. Nada sale del navegador y al recargar todo vuelve a como
+ * estaba. datos.json tiene la forma de las respuestas de la API: si la API
+ * cambia de forma, hay que retocarlo a mano.
  */
 
 const PID = datos.parcelaId;
