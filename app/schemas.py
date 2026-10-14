@@ -1,8 +1,8 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Annotated, List, Literal, Optional
 from zoneinfo import ZoneInfo
 
-from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict, EmailStr, Field
+from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict, EmailStr, Field, field_validator
 
 _TZ_MADRID = ZoneInfo("Europe/Madrid")
 
@@ -24,13 +24,39 @@ FechaHoraMadrid = Annotated[datetime, AfterValidator(_a_hora_madrid_sin_zona)]
 
 # ─── Inputs ──────────────────────────────────────────────────────────────────
 
+# Rango fisico de cada medida. Fuera de el no es una lectura, es un sensor
+# averiado o un paquete corrupto, y guardarlo ensucia medias y graficas.
+_FECHA_MINIMA_LECTURA = datetime(2024, 1, 1)
+_ADELANTO_MAXIMO_RELOJ = timedelta(minutes=10)
+
+
 class LogSensorCreate(BaseModel):
+    # NaN e infinitos fuera: un solo NaN deja con error el panel de la parcela.
+    model_config = ConfigDict(allow_inf_nan=False)
+
     parcela_id: int
     sensor_id: int
     fecha_hora: FechaHoraMadrid
     humedad_suelo_pct: Optional[float] = Field(None, ge=0, le=100)
-    temperatura_suelo: Optional[float] = None
+    temperatura_suelo: Optional[float] = Field(None, ge=-30, le=70)
+    # El firmware manda voltios (unos 3,3-4,3 V) y alguna version antigua,
+    # porcentaje: el tope de 100 admite los dos sin aceptar basura.
     bateria: Optional[float] = Field(None, ge=0, le=100)
+
+    @field_validator("fecha_hora")
+    @classmethod
+    def _fecha_plausible(cls, v: datetime) -> datetime:
+        """
+        Ni de 1970 (un ESP que arranca sin hora de internet) ni del futuro.
+        Se toleran unos minutos de adelanto del reloj del aparato, y se
+        aceptan lecturas antiguas: el maestro reenvia dias despues lo que no
+        pudo subir.
+        """
+        if v < _FECHA_MINIMA_LECTURA:
+            raise ValueError("La fecha de la lectura es anterior a 2024: el dispositivo no tiene la hora bien puesta.")
+        if v > datetime.now(_TZ_MADRID).replace(tzinfo=None) + _ADELANTO_MAXIMO_RELOJ:
+            raise ValueError("La fecha de la lectura está en el futuro: el dispositivo no tiene la hora bien puesta.")
+        return v
 
 
 

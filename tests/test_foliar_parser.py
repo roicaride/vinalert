@@ -32,3 +32,35 @@ def test_archivo_con_formato_invalido_lanza_excepcion(tmp_path):
 
     with pytest.raises(FormatoExcelInvalido):
         parsear_excel_foliar(str(ruta))
+
+
+def test_una_hoja_con_demasiadas_filas_se_rechaza(tmp_path, monkeypatch):
+    import openpyxl
+
+    import app.services.foliar_parser as fp
+
+    monkeypatch.setattr(fp, "MAX_FILAS", 50)
+    wb = openpyxl.Workbook()
+    for i in range(60):
+        wb.active.append([i])
+    ruta = tmp_path / "largo.xlsx"
+    wb.save(ruta)
+
+    with pytest.raises(fp.FormatoExcelInvalido, match="filas"):
+        fp.parsear_excel_foliar(str(ruta))
+
+
+def test_filas_cortas_no_rompen_el_parser(tmp_path):
+    import openpyxl
+
+    from app.services.foliar_parser import FormatoExcelInvalido, parsear_excel_foliar
+
+    wb = openpyxl.Workbook()
+    wb.active.append(["#Grupo", "Chl"])
+    wb.active.append([1, 2.0])  # bloque resumen incompleto
+    wb.active.append([])
+    ruta = tmp_path / "corto.xlsx"
+    wb.save(ruta)
+
+    with pytest.raises(FormatoExcelInvalido):
+        parsear_excel_foliar(str(ruta))

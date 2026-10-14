@@ -1,7 +1,27 @@
+import zipfile
 from datetime import datetime
 from typing import BinaryIO, Dict, List, Union
 
 import openpyxl
+
+# Un .xlsx es un zip. Un archivo manipulado (bomba zip) ocupa pocos KB y al
+# abrirlo cientos de MB: se mira el tamano descomprimido antes de abrirlo.
+MAX_BYTES_DESCOMPRIMIDO = 50 * 1024 * 1024
+# Un archivo real del Dualex tiene unos cientos de filas.
+MAX_FILAS = 20_000
+
+
+def _comprobar_tamano(archivo) -> None:
+    try:
+        with zipfile.ZipFile(archivo) as z:
+            total = sum(info.file_size for info in z.infolist())
+    except (zipfile.BadZipFile, OSError):
+        raise FormatoExcelInvalido("El archivo no es un Excel (.xlsx) válido.")
+    finally:
+        if hasattr(archivo, "seek"):
+            archivo.seek(0)
+    if total > MAX_BYTES_DESCOMPRIMIDO:
+        raise FormatoExcelInvalido("El archivo es demasiado grande al abrirlo: no parece un Excel del medidor foliar.")
 
 
 class FormatoExcelInvalido(Exception):
@@ -26,15 +46,29 @@ def parsear_excel_foliar(archivo: Union[str, BinaryIO]) -> List[Dict]:
     seguido de la fila de valores agregados de ese grupo. Solo se guarda
     el resumen: el propio dispositivo ya calcula media y desviación.
     """
+    _comprobar_tamano(archivo)
     try:
-        wb = openpyxl.load_workbook(archivo, data_only=True)
-        filas = list(wb.worksheets[0].iter_rows(values_only=True))
+        # read_only: lee la hoja fila a fila en vez de montarla entera en memoria.
+        wb = openpyxl.load_workbook(archivo, read_only=True, data_only=True)
+        filas = []
+        for fila in wb.worksheets[0].iter_rows(values_only=True):
+            filas.append(fila)
+            if len(filas) > MAX_FILAS:
+                raise FormatoExcelInvalido(
+                    f"La hoja tiene más de {MAX_FILAS} filas: no parece un Excel del medidor foliar."
+                )
+        wb.close()
+    except FormatoExcelInvalido:
+        raise
     except Exception as exc:
-        raise FormatoExcelInvalido(f"No se pudo abrir el archivo: {exc}") from exc
+        # Sin el texto de la libreria: no le dice nada a quien sube el archivo.
+        raise FormatoExcelInvalido("No se pudo abrir el archivo. Comprueba que sea el Excel exportado del medidor.") from exc
 
     fecha_archivo = None
     conteo_por_grupo: Dict[int, int] = {}
     for fila in filas:
+        if not fila:
+            continue
         if isinstance(fila[0], datetime):
             if fecha_archivo is None:
                 fecha_archivo = fila[0].date()
@@ -44,10 +78,13 @@ def parsear_excel_foliar(archivo: Union[str, BinaryIO]) -> List[Dict]:
 
     resultados: List[Dict] = []
     for i, fila in enumerate(filas):
-        if fila[0] == "#Grupo" and len(fila) > 1 and fila[1] == "Chl":
+        if fila and fila[0] == "#Grupo" and len(fila) > 1 and fila[1] == "Chl":
             if i + 1 >= len(filas):
                 continue
             valores = filas[i + 1]
+            # Un bloque resumen incompleto se salta en vez de romper el parser.
+            if len(valores) < 7:
+                continue
             grupo = valores[0]
             if not isinstance(grupo, int):
                 continue

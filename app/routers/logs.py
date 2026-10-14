@@ -8,9 +8,13 @@ from ..database import get_db
 from ..deps import get_emisor_lecturas, parcela_con_gestion
 from ..models import DispositivoIoT, LogClima, LogSensor, Sensor, Usuario
 from ..schemas import LogSensorCreate, LogSensorResp
-from ..services.weather import TZ_LOCAL, fetch_y_guardar_clima
+from ..services.weather import TZ_LOCAL
 
 router = APIRouter(prefix="/logs", tags=["logs"])
+
+# Un clima mas viejo que esto no se presenta como el de ahora. Cubre dos
+# refrescos del scheduler (cada 3 h por defecto) por si uno ha fallado.
+ANTIGUEDAD_MAXIMA_CLIMA = timedelta(hours=6)
 
 
 
@@ -68,28 +72,17 @@ def crear_log_sensor(
     log.sensor_etiqueta = sensor.etiqueta
     log.sensor_profundidad_cm = sensor.profundidad_cm
 
-    # Si la parcela tiene coordenadas, verificar si hay clima fresco (< 15 min); si no, consultar la API meteorológica
-    ahora_local = datetime.now(TZ_LOCAL).replace(tzinfo=None)
-    quince_min_atras = ahora_local - timedelta(minutes=15)
+    # El clima de la respuesta es el ultimo guardado, sin consultar a nadie:
+    # el ESP32 espera 8 s y Open-Meteo puede tardar 25, y cada vez que el
+    # aparato no recibia respuesta a tiempo reenviaba la lectura. El scheduler
+    # ya refresca el clima de cada parcela cada CLIMA_INTERVALO_HORAS.
+    hace_un_rato = datetime.now(TZ_LOCAL).replace(tzinfo=None) - ANTIGUEDAD_MAXIMA_CLIMA
     clima_reciente = (
         db.query(LogClima)
-        .filter(LogClima.parcela_id == body.parcela_id, LogClima.fecha_hora >= quince_min_atras)
+        .filter(LogClima.parcela_id == body.parcela_id, LogClima.fecha_hora >= hace_un_rato)
         .order_by(LogClima.fecha_hora.desc())
         .first()
     )
-
-
-    if clima_reciente is None and sensor.parcela and sensor.parcela.latitud is not None and sensor.parcela.longitud is not None:
-        try:
-            fetch_y_guardar_clima(sensor.parcela, db)
-            clima_reciente = (
-                db.query(LogClima)
-                .filter(LogClima.parcela_id == body.parcela_id)
-                .order_by(LogClima.fecha_hora.desc())
-                .first()
-            )
-        except Exception:
-            pass
 
     if clima_reciente:
         log.temp_ambiente_c = clima_reciente.temp_c

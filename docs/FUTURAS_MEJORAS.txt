@@ -71,11 +71,13 @@ publicar, revisar con calma, idealmente con su servicio jurídico:
   escrito, y mostrar su atribución (CC BY 4.0) junto a los datos de clima, no
   solo en el aviso legal.
 
-[PENDIENTE] INGESTA
+[RESUELTO] INGESTA (2026-10-14)
 --------------------------------------------------------------------------------
-- Duplicados exactos: resuelto (2026-10-13).
-- Causa de los reenvíos: cada lectura espera a Open-Meteo (hasta 25 s) y el
-  ESP32 corta a los 8 s. Sacar esa llamada de la petición de ingesta.
-- Validar valores imposibles (NaN, infinitos, rangos físicos) y fechas
-  absurdas (1970, futuro lejano).
-- Limitar el tamaño del Excel foliar que se sube.
+- Duplicados exactos: no se guardan; se responde 200 con la lectura existente.
+- La ingesta ya no espera a Open-Meteo: responde al momento con el ultimo
+  clima guardado (de menos de 6 h). Era la causa de los reenvios del ESP32.
+- Se rechazan NaN, infinitos, valores fuera de rango fisico y fechas
+  anteriores a 2024 o mas de 10 min en el futuro.
+- Excel foliar: maximo 5 MB, 50 MB descomprimido y 20.000 filas.
+- Pendiente de confirmar con quien lleva el firmware: el rango real de
+  "bateria" (hoy se admite 0-100, que vale para voltios y para porcentaje).

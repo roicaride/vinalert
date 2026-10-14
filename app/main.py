@@ -1,3 +1,4 @@
+import math
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -5,7 +6,10 @@ from datetime import datetime, timezone
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import Base, SessionLocal, engine
@@ -98,6 +102,27 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Vinalert API", lifespan=lifespan)
+
+
+def _json_seguro(valor):
+    """NaN e infinito no existen en JSON: se devuelven como texto."""
+    if isinstance(valor, float) and not math.isfinite(valor):
+        return str(valor)
+    if isinstance(valor, dict):
+        return {k: _json_seguro(v) for k, v in valor.items()}
+    if isinstance(valor, (list, tuple)):
+        return [_json_seguro(v) for v in valor]
+    return valor
+
+
+@app.exception_handler(RequestValidationError)
+async def _error_de_validacion(request: Request, exc: RequestValidationError) -> JSONResponse:
+    """
+    El 422 de siempre, pero sin romperse cuando el valor rechazado es NaN o
+    infinito: el manejador por defecto lo copia en la respuesta, no lo puede
+    serializar y la peticion acababa en 500.
+    """
+    return JSONResponse(status_code=422, content={"detail": _json_seguro(jsonable_encoder(exc.errors()))})
 
 _raw_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173")
 origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]

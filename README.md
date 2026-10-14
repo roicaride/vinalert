@@ -351,7 +351,7 @@ is the plot id.
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `POST` | `/logs/sensor/` | Submit a soil reading. Used by the ESP32 master. |
+| `POST` | `/logs/sensor/` | Submit a soil reading. Used by the ESP32 master. Answers at once with the latest stored weather (no external call). An exact resend of a stored reading returns `200` with it; impossible values (NaN, out of physical range, dates before 2024 or in the future) return `422`. |
 
 ### IoT devices
 

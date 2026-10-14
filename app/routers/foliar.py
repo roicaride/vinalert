@@ -10,6 +10,8 @@ from ..models import LecturaFoliar, Usuario
 from ..schemas import LecturaFoliarResp
 from ..services.foliar_parser import FormatoExcelInvalido, parsear_excel_foliar
 
+MAX_BYTES_EXCEL = 5 * 1024 * 1024
+
 router = APIRouter(prefix="/parcelas/{parcela_id}/foliar", tags=["foliar"])
 
 
@@ -22,9 +24,16 @@ def subir_excel_foliar(
 ) -> Any:
     parcela_con_gestion(parcela_id, current_user, db)
 
-    contenido = io.BytesIO(archivo.file.read())
+    # Se lee como mucho un byte mas del limite: basta para saber si se pasa
+    # sin cargar en memoria un archivo de cualquier tamano.
+    datos = archivo.file.read(MAX_BYTES_EXCEL + 1)
+    if len(datos) > MAX_BYTES_EXCEL:
+        raise HTTPException(
+            status_code=413,
+            detail="El archivo pesa más de 5 MB. Un Excel del medidor foliar ocupa mucho menos: revisa que sea el correcto.",
+        )
     try:
-        bloques = parsear_excel_foliar(contenido)
+        bloques = parsear_excel_foliar(io.BytesIO(datos))
     except FormatoExcelInvalido as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
