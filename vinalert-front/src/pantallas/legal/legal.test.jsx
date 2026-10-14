@@ -90,7 +90,7 @@ test('la portada enlaza a las paginas legales y usa el email del titular', async
 
   const pie = await screen.findByRole('navigation', { name: 'Información legal' });
   expect(within(pie).getByRole('link', { name: 'Privacidad' })).toHaveAttribute('href', '/privacidad');
-  const solicitar = await screen.findAllByRole('link', { name: 'Solicitar acceso' });
+  const solicitar = await screen.findAllByRole('link', { name: 'Solicitar una demostración' });
   await vi.waitFor(() => expect(solicitar[0].getAttribute('href')).toContain('privacidad@bodegasejemplo.es'));
 });
 

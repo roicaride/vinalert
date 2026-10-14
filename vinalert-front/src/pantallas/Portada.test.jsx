@@ -29,18 +29,17 @@ test('sin sesion, la raiz ensena la portada y no el panel', async () => {
   expect(listarParcelas).not.toHaveBeenCalled();
 });
 
-test('arriba a la derecha estan iniciar sesion y solicitar acceso', async () => {
+test('arriba a la derecha estan iniciar sesion y solicitar una demostracion', async () => {
   render(<App />);
 
   const entrar = await screen.findAllByRole('link', { name: 'Iniciar sesión' });
   expect(entrar[0]).toHaveAttribute('href', '/login');
-  // Las cuentas se dan de alta por invitacion: sin registro, se pide por email.
-  const solicitar = screen.getAllByRole('link', { name: 'Solicitar acceso' });
-  expect(solicitar.length).toBeGreaterThan(0);
-  for (const enlace of solicitar) {
-    expect(enlace.getAttribute('href')).toMatch(/^mailto:/);
-  }
+  // Las cuentas se dan de alta por invitacion: sin registro ni «Solicitar
+  // acceso»; quien no es cliente pide una demostracion por email.
+  const demo = screen.getAllByRole('link', { name: 'Solicitar una demostración' });
+  expect(demo[0].getAttribute('href')).toMatch(/^mailto:/);
   expect(screen.queryByRole('link', { name: 'Crear cuenta' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: 'Solicitar acceso' })).not.toBeInTheDocument();
 });
 
 test('con sesion, la raiz lleva al panel sin pasar por la portada', async () => {

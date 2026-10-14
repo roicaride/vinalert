@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { CuadroMarca, Filigrana, Marca } from '../marca/Marca';
+import { CuadroMarca, Marca } from '../marca/Marca';
 import { claseBoton } from '../ui/claseBoton';
-import { Testigo } from '../ui/Estados';
 import { Rejilla } from '../ui/Panel';
+import CorteSuelo from './portada/CorteSuelo';
+import { PictoMaestro, PictoNodo, PictoPlataforma, PictoSonda } from './portada/Pictogramas';
+import { Activity, ChartLine, CloudSun, KeyRound, Leaf, Map as MapaIcono, NotebookPen, RadioTower } from 'lucide-react';
 import { CORREO_CONTACTO, EQUIPO, IDIOMAS } from './portada/textos';
 import { useIdioma } from './portada/useIdioma';
 import PieLegal from './legal/PieLegal';
@@ -17,10 +19,16 @@ import { useConfiguracionLegal } from './legal/useConfiguracionLegal';
  * Mono para lo que mide— para que pasar de aqui al panel se sienta como
  * entrar en el mismo sitio y no como cambiar de web.
  *
- * El gesto de la portada es la lista de nodos de la derecha: es el producto
- * contado con su propio vocabulario (N-01 ─ ONLINE), no una ilustracion.
- * Esta marcada como vista de ejemplo porque no son datos de nadie.
+ * El gesto de la portada es el corte del suelo de la derecha: lo que mide
+ * Viñalert, visto de lado (portada/CorteSuelo.jsx). Esta marcado como vista
+ * de ejemplo porque no son datos de nadie. Todo lo demas se queda sobrio para
+ * que ese sea el momento que se recuerda.
  */
+
+const PICTOGRAMAS = [PictoSonda, PictoNodo, PictoMaestro, PictoPlataforma];
+// En el mismo orden que TEXTOS[idioma].ofrecemos.items.
+const ICONOS_OFRECEMOS = [Activity, CloudSun, NotebookPen, Leaf, ChartLine, KeyRound, MapaIcono, RadioTower];
+const LOCALE = { es: 'es-ES', gl: 'gl-ES', en: 'en-GB' };
 
 const ANCHO = 'px-6 md:px-12';
 
@@ -76,16 +84,6 @@ export default function Portada() {
   const config = useConfiguracionLegal();
   const contacto = config?.titular_email || CORREO_CONTACTO;
   const correo = `mailto:${contacto}?subject=${encodeURIComponent(t.contacto.asunto)}`;
-  // Las cuentas se dan de alta por invitacion: quien no tiene una la pide.
-  const solicitar = `mailto:${contacto}?subject=${encodeURIComponent(t.nav.asuntoAcceso)}`;
-
-  const nodos = [
-    { id: 'N-01', valor: t.portada.online, tinta: 'text-brote', tono: 'brote' },
-    { id: 'N-02', valor: t.portada.online, tinta: 'text-brote', tono: 'brote' },
-    { id: 'N-03', valor: t.portada.inactivo, tinta: 'text-oso-3', tono: 'neutro' },
-    { id: 'N-04', valor: hora, tinta: 'text-oso-2', tono: 'neutro' },
-    { id: t.portada.pasarela, valor: '868 MHz', tinta: 'text-oso-2', tono: 'vina' },
-  ];
 
   const secciones = [
     ['#como-funciona', t.nav.como],
@@ -133,8 +131,8 @@ export default function Portada() {
             {/* El hidden va en un envoltorio: en el propio enlace chocaria con el
                 inline-flex de claseBoton y ganaria el que la hoja pone despues. */}
             <span className="hidden sm:flex">
-              <a href={solicitar} className={claseBoton('fantasma')}>
-                {t.nav.crear}
+              <a href={correo} className={claseBoton('fantasma')}>
+                {t.portada.demo}
               </a>
             </span>
           </div>
@@ -153,42 +151,43 @@ export default function Portada() {
             </h1>
             <p className="mt-8 max-w-xl text-lg leading-relaxed text-oso-2">{t.portada.texto}</p>
             <div className="mt-10 flex flex-wrap gap-3">
-              <a href={solicitar} className={claseBoton('solido', 'lg')}>
-                {t.nav.crear}
-              </a>
-              <a href={correo} className={claseBoton('fantasma', 'lg')}>
+              <a href={correo} className={claseBoton('solido', 'lg')}>
                 {t.portada.demo}
+              </a>
+              <a href="#como-funciona" className={claseBoton('fantasma', 'lg')}>
+                {t.nav.como}
               </a>
             </div>
           </div>
 
-          <div className="relative flex flex-col bg-lousa">
-            <Filigrana alto={320} />
-            <div className="relative flex items-center justify-between border-b border-linea px-6 py-3">
+          <div className="flex flex-col bg-lousa">
+            <div className="flex items-center justify-between border-b border-linea px-6 py-3">
               <p className="rotulo">{t.portada.ejemplo}</p>
               <span className="flex items-center gap-2">
-                <span aria-hidden="true" className="size-2 animate-pulse bg-brote" />
+                <span aria-hidden="true" className="size-2 bg-brote motion-safe:animate-pulse" />
                 <span className="font-mono text-[11px] tabular-nums text-oso-3">{hora}</span>
               </span>
             </div>
-            <ul className="relative flex flex-1 flex-col justify-center divide-y divide-linea px-6 py-4">
-              {nodos.map((n, i) => (
-                <li
-                  key={n.id}
-                  className="flex items-center justify-between gap-4 py-5 motion-safe:animate-[encender_.45s_ease-out_both]"
-                  style={{ animationDelay: `${150 + i * 110}ms` }}
-                >
-                  <span className="flex items-center gap-3">
-                    <Testigo tono={n.tono} />
-                    <span className="font-mono text-sm tracking-[0.14em] text-oso-2 uppercase">{n.id}</span>
-                  </span>
-                  <span className={`font-mono text-sm tracking-[0.14em] tabular-nums uppercase ${n.tinta}`}>
-                    {n.valor}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <div className="flex flex-1 items-center px-4 py-6 md:px-6">
+              <CorteSuelo textos={t.corte} locale={LOCALE[codigo]} />
+            </div>
           </div>
+        </section>
+
+        {/* ---------------------------------------------------------------- */}
+        {/* Trayectoria: lo que ya hemos hecho, antes de contar lo que hace.  */}
+        {/* ---------------------------------------------------------------- */}
+        <section aria-label={t.trayectoria.rotulo} className="border-b border-linea">
+          <Rejilla cols="md:grid-cols-3">
+            {t.trayectoria.items.map((item) => (
+              <div key={item.cifra} className={`bg-lousa ${ANCHO} py-10 md:px-8`}>
+                <p className="font-mono text-3xl leading-none font-medium tracking-[-0.02em] text-brote md:text-4xl">
+                  {item.cifra}
+                </p>
+                <p className="mt-4 max-w-xs text-sm leading-relaxed text-oso-2">{item.texto}</p>
+              </div>
+            ))}
+          </Rejilla>
         </section>
 
         {/* ---------------------------------------------------------------- */}
@@ -197,22 +196,21 @@ export default function Portada() {
         <section id="como-funciona" className="scroll-mt-14 border-b border-linea">
           <CabeceraSeccion rotulo={t.como.rotulo} titulo={t.como.titulo} texto={t.como.texto} />
           <Rejilla cols="sm:grid-cols-2 lg:grid-cols-4">
-            {t.como.pasos.map((p, i) => (
+            {t.como.pasos.map((p, i) => {
+              const Picto = PICTOGRAMAS[i];
+              return (
               <div key={p.titulo} className={`bg-lousa ${ANCHO} py-10 md:px-8`}>
-                <div className="flex items-baseline justify-between">
-                  <span className="font-mono text-4xl font-medium tabular-nums text-brote">
+                <div className="flex items-start justify-between text-oso-2">
+                  <Picto />
+                  <span className="font-mono text-sm font-medium tabular-nums text-oso-3">
                     {String(i + 1).padStart(2, '0')}
                   </span>
-                  {i < t.como.pasos.length - 1 && (
-                    <span aria-hidden="true" className="hidden font-mono text-lg text-oso-4 lg:inline">
-                      →
-                    </span>
-                  )}
                 </div>
                 <h3 className="mt-6 font-mono text-base font-medium tracking-[0.06em] text-oso">{p.titulo}</h3>
                 <p className="mt-3 text-sm leading-relaxed text-oso-2">{p.texto}</p>
               </div>
-            ))}
+              );
+            })}
           </Rejilla>
         </section>
 
@@ -222,13 +220,16 @@ export default function Portada() {
         <section id="ofrecemos" className="scroll-mt-14 border-b border-linea">
           <CabeceraSeccion rotulo={t.ofrecemos.rotulo} titulo={t.ofrecemos.titulo} />
           <Rejilla cols="sm:grid-cols-2 lg:grid-cols-4">
-            {t.ofrecemos.items.map((item) => (
-              <div key={item.titulo} className="bg-lousa px-6 py-8 transition-colors hover:bg-alza md:px-8">
-                <Testigo tono="brote" />
+            {t.ofrecemos.items.map((item, i) => {
+              const Icono = ICONOS_OFRECEMOS[i];
+              return (
+              <div key={item.titulo} className="bg-lousa px-6 py-8 md:px-8">
+                <Icono aria-hidden="true" size={28} strokeWidth={1.5} strokeLinecap="square" strokeLinejoin="miter" className="text-brote" />
                 <h3 className="mt-5 font-mono text-sm font-medium tracking-[0.04em] text-oso">{item.titulo}</h3>
                 <p className="mt-2.5 text-sm leading-relaxed text-oso-2">{item.texto}</p>
               </div>
-            ))}
+              );
+            })}
           </Rejilla>
         </section>
 
@@ -258,23 +259,31 @@ export default function Portada() {
         {/* ---------------------------------------------------------------- */}
         {/* Quienes somos. Las personas se rellenan en textos.js.             */}
         {/* ---------------------------------------------------------------- */}
-        <section id="equipo" className="scroll-mt-14 border-b border-linea">
+        <section id="equipo" aria-label={t.equipo.titulo} className="scroll-mt-14 border-b border-linea">
           <CabeceraSeccion rotulo={t.equipo.rotulo} titulo={t.equipo.titulo} texto={t.equipo.texto} />
           <Rejilla cols="md:grid-cols-3">
-            {EQUIPO.map((persona, i) => {
-              const hueco = !persona.nombre;
+            {EQUIPO.map((persona) => {
+              const papel = t.equipo.personas[persona.id];
               return (
-                <article key={i} className={`flex items-start gap-5 bg-lousa ${ANCHO} py-10 md:px-8`}>
-                  <CuadroMarca lado={56} tinta={persona.tinta} />
-                  <div className="min-w-0">
-                    <h3 className={`font-mono text-base font-medium ${hueco ? 'text-oso-3' : 'text-oso'}`}>
-                      {persona.nombre ?? t.equipo.nombre}
-                    </h3>
-                    <p className="rotulo mt-1.5">{persona.cargo ?? t.equipo.cargo}</p>
-                    <p className={`mt-3 text-sm leading-relaxed ${hueco ? 'text-oso-3' : 'text-oso-2'}`}>
-                      {persona.linea ?? t.equipo.linea}
-                    </p>
-                  </div>
+                <article key={persona.id} className={`flex flex-col bg-lousa ${ANCHO} py-10 md:px-8`}>
+                  <span
+                    aria-hidden="true"
+                    className={`grid size-16 place-items-center font-mono text-xl font-medium tracking-[0.04em] ${persona.tinta}`}
+                  >
+                    {persona.iniciales}
+                  </span>
+                  <h3 className="mt-6 font-mono text-lg font-medium text-oso">{persona.nombre}</h3>
+                  <p className="mt-1.5 text-sm text-brote">{papel.cargo}</p>
+                  <p className="mt-3 flex-1 text-sm leading-relaxed text-oso-2">{papel.linea}</p>
+                  <a
+                    href={persona.linkedin}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${t.equipo.linkedinDe} ${persona.nombre}`}
+                    className="mt-6 w-fit border-b border-linea-viva pb-0.5 font-mono text-xs text-oso-2 transition-colors hover:border-brote hover:text-brote"
+                  >
+                    {t.equipo.linkedin}
+                  </a>
                 </article>
               );
             })}
@@ -304,22 +313,19 @@ export default function Portada() {
         </section>
       </main>
 
-      <footer className={`flex flex-wrap items-center justify-between gap-4 border-t border-linea ${ANCHO} py-6`}>
+      <footer className={`flex flex-col gap-4 border-t border-linea ${ANCHO} py-6 md:flex-row md:items-center md:justify-between`}>
         <div className="flex items-center gap-3">
           <Marca alto={14} className="text-oso-4" />
-          <span className="rotulo text-oso-3">
+          <span className="text-xs text-oso-3">
             © {new Date().getFullYear()} Viñalert · {t.pie.derechos}
           </span>
         </div>
-        <div className="flex items-center gap-5">
-          <Link to="/login" className="rotulo text-oso-3 hover:text-brote">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+          <PieLegal />
+          <Link to="/login" className="rotulo text-oso-2 hover:text-brote">
             {t.nav.entrar}
           </Link>
-          <a href={solicitar} className="rotulo text-oso-3 hover:text-brote">
-            {t.nav.crear}
-          </a>
         </div>
-        <PieLegal className="w-full border-t border-linea pt-4" />
       </footer>
     </div>
   );

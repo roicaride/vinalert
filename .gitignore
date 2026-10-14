@@ -56,3 +56,8 @@ logos viñalert/
 
 # ─── Datos de trabajo (el fixture vive en tests/fixtures/) ───────────────────
 /Libro1.xlsx
+
+# ─── Documentos personales ─────────────────────────────────────────────────────
+# CV de los socios (llevan teléfono y otros datos personales): nunca al repo.
+/CV*.pdf
+/cv*.pdf

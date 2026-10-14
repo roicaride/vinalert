@@ -50,26 +50,25 @@
   * Base de datos: PostgreSQL con volumen persistente.
   * Scheduler / Worker: Proceso cron autónomo para consolidación nocturna.
 
-[REVISAR AL FINAL] LEGAL (anotado el 2026-10-13)
+[REVISAR AL FINAL] LEGAL (anotado el 2026-10-13, corregido el 2026-10-14)
 --------------------------------------------------------------------------------
-El cliente es un centro de investigación público (universidad). Antes de
-publicar, revisar con calma, idealmente con su servicio jurídico:
-- Rellenar en Administración > Configuración los datos del titular (la
-  universidad) y del encargado (nosotros). Mientras falten, las páginas
-  legales muestran "[pendiente de completar]".
-- Base jurídica: siendo un organismo público, lo propio es "misión realizada
-  en interés público" (art. 6.1.e RGPD) en vez de contrato/interés legítimo.
-  Ajustar el texto de /privacidad.
-- Delegado de Protección de Datos: las universidades públicas están obligadas
-  a tenerlo (art. 37.1.a RGPD). Añadir su contacto a la configuración y a
-  /privacidad.
-- Contrato de encargo de tratamiento (art. 28 RGPD) firmado entre la
-  universidad y nosotros.
+Viñalert es un SaaS nuestro; la universidad (centro de investigación público)
+es un cliente. Antes de publicar, revisar con calma, idealmente con un abogado:
+- Titular de la web (aviso legal, LSSI): Viñalert / sus socios, no el cliente.
+  Falta decidir la forma jurídica (sociedad, autónomos...) y sus datos.
+- Privacidad: Viñalert es responsable de los datos de la web y de la relación
+  comercial; para los datos de campo y las cuentas de cada cliente, lo normal
+  es que el cliente sea responsable y Viñalert encargado (contrato art. 28
+  RGPD firmado con cada cliente). Ajustar /privacidad y las etiquetas de
+  Administración > Configuración ("Titular" hoy dice "responsable").
+- Con la universidad como cliente: su base jurídica será la misión de interés
+  público (art. 6.1.e) y tendrá Delegado de Protección de Datos (art. 37).
+- Open-Meteo: al ser un SaaS de pago, es uso comercial según sus condiciones
+  ("integrar el servicio en productos comerciales"). Hace falta plan de pago
+  (el Standard no incluye la API histórica, que usamos: sería el
+  Professional) o confirmación por escrito de info@open-meteo.com. Mostrar
+  su atribución (CC BY 4.0) junto a los datos de clima.
 - Que un abogado revise aviso legal, privacidad, cookies y condiciones.
-- Open-Meteo: su plan gratuito admite "investigación pública en instituciones
-  públicas"; confirmarlo por email (info@open-meteo.com) para tenerlo por
-  escrito, y mostrar su atribución (CC BY 4.0) junto a los datos de clima, no
-  solo en el aviso legal.
 
 [RESUELTO] INGESTA (2026-10-14)
 --------------------------------------------------------------------------------

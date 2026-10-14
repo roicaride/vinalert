@@ -188,17 +188,6 @@
 
 /* La portada enciende su lista de nodos uno a uno, como un aparato que
    arranca. Es el unico movimiento de la web y dura menos de un segundo. */
-@keyframes encender {
-  from {
-    opacity: 0;
-    transform: translateX(-6px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
 @media (prefers-reduced-motion: no-preference) {
   html {
     scroll-behavior: smooth;
@@ -212,5 +201,18 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* El nodo del corte del suelo "emite": cada arco se enciende y se apaga, con
+   un pequeño desfase entre ellos (lo pone el componente). Solo corre con
+   motion-safe, asi que no existe para quien pide reducir el movimiento. */
+@keyframes lora {
+  0%,
+  100% {
+    opacity: 0.15;
+  }
+  35% {
+    opacity: 1;
   }
 }

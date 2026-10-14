@@ -4,25 +4,47 @@
  * Solo la portada es trilingue: es lo que ve alguien que todavia no es
  * usuario. La aplicacion sigue en castellano.
  *
- * Todo lo que se afirma aqui sobre el producto sale del README y del firmware
- * (LoRa a 868 MHz, nodos solares, bufer en flash, intervalo de 5 min a 24 h,
- * tres niveles de permiso). Si cambia el producto, cambia aqui.
+ * Todo lo que se afirma aqui sobre el producto tiene que ser cierto hoy: sale
+ * del README y del firmware (LoRa a 868 MHz, nodos solares, bufer en flash,
+ * intervalo de 5 min a 24 h, permisos de gestion y lectura por parcela, alta
+ * por invitacion, mapas del IGN). La logica de riego se retiro en septiembre
+ * de 2026: no se promete. Si cambia el producto, cambia aqui (lo vigila
+ * portada/landing.test.jsx).
  */
 
 // ---------------------------------------------------------------------------
-// RELLENAR ANTES DE PUBLICAR
-//
-// El correo de contacto y las personas del equipo no salen del codigo: son
-// huecos a proposito, para que en la web publica no aparezca nadie inventado.
+// RELLENAR ANTES DE PUBLICAR: el correo de contacto. Se usa mientras no este
+// configurado el del titular en Administracion > Configuracion.
 // `example.com` es un dominio reservado que no pertenece a nadie.
 // ---------------------------------------------------------------------------
 export const CORREO_CONTACTO = 'contacto@example.com';
 
-/** Una entrada por persona. `tinta` es el color de su cuadrado de marca. */
+/**
+ * Los tres cofundadores. Cargo y linea van traducidos en TEXTOS[idioma].equipo.
+ * `tinta` es el color de su cuadrado de marca. Sin fotos, a proposito.
+ */
 export const EQUIPO = [
-  { tinta: 'bg-vina', nombre: null, cargo: null, linea: null },
-  { tinta: 'bg-oso', nombre: null, cargo: null, linea: null },
-  { tinta: 'bg-brote', nombre: null, cargo: null, linea: null },
+  {
+    id: 'roi',
+    nombre: 'Roi Caride',
+    iniciales: 'RC',
+    tinta: 'bg-vina text-oso',
+    linkedin: 'https://www.linkedin.com/in/roi-caride-borrajo/',
+  },
+  {
+    id: 'levi',
+    nombre: 'Levi García',
+    iniciales: 'LG',
+    tinta: 'bg-oso text-lousa',
+    linkedin: 'https://www.linkedin.com/in/levi--garcia/',
+  },
+  {
+    id: 'angel',
+    nombre: 'Ángel de la Peña',
+    iniciales: 'ÁP',
+    tinta: 'bg-brote text-lousa',
+    linkedin: 'https://www.linkedin.com/in/%C3%A1ngel-de-la-pe%C3%B1a-freire-319520247/',
+  },
 ];
 
 export const IDIOMAS = [
@@ -39,8 +61,6 @@ export const TEXTOS = {
       equipo: 'Equipo',
       contacto: 'Contacto',
       entrar: 'Iniciar sesión',
-      crear: 'Solicitar acceso',
-      asuntoAcceso: 'Solicitud de acceso a Viñalert',
       idioma: 'Idioma',
       principal: 'Secciones de la página',
     },
@@ -48,12 +68,24 @@ export const TEXTOS = {
       rotulo: 'Viticultura de precisión',
       titulo: 'Deja que la viña hable.',
       texto:
-        'Sondas en el suelo, una red LoRa en la parcela y una plataforma que convierte cada lectura en decisiones de riego, tratamientos documentados y análisis agronómico.',
+        'Sondas en el suelo, una red LoRa en la parcela y una plataforma que convierte cada lectura en balance hídrico, tratamientos documentados y análisis agronómico.',
       demo: 'Solicitar una demostración',
       ejemplo: 'Vista de ejemplo',
-      online: 'Online',
-      inactivo: 'Inactivo',
-      pasarela: 'Pasarela',
+    },
+    corte: {
+      descripcion:
+        'Corte del suelo de una parcela de ejemplo: una cepa, sus raíces y tres sondas a 20, 40 y 60 cm que miden la humedad, y el nodo que envía las lecturas por LoRa.',
+      humedad: 'Humedad',
+      nodo: 'Nodo N-01',
+      envio: 'Envía por LoRa · 868 MHz',
+    },
+    trayectoria: {
+      rotulo: 'Trayectoria',
+      items: [
+        { cifra: '18 sensores', texto: 'y 7 nodos en el centro de investigación de una universidad pública: nuestra primera instalación.' },
+        { cifra: '5.000 €', texto: 'del premio Semente Ribeira Sacra, que ganamos tras ser finalistas dos veces.' },
+        { cifra: 'Incuba Emprende', texto: 'nos acompaña con su programa de mentoring para proyectos emprendedores.' },
+      ],
     },
     como: {
       rotulo: 'Cómo funciona',
@@ -83,13 +115,13 @@ export const TEXTOS = {
       titulo: 'Todo lo que pasa en la parcela, en un solo sitio.',
       items: [
         { titulo: 'Telemetría del suelo', texto: 'Humedad y temperatura por sensor, lectura a lectura, con la hora exacta de cada una.' },
-        { titulo: 'Clima y balance hídrico', texto: 'Condiciones horarias y diarias de Open-Meteo, y la ET₀ frente a la lluvia para saber cuándo regar.' },
+        { titulo: 'Clima y balance hídrico', texto: 'Condiciones horarias y diarias, y la ET₀ frente a la lluvia para seguir el agua que gana o pierde la parcela.' },
         { titulo: 'Cuaderno de tratamientos', texto: 'Cada aplicación queda registrada con el tiempo que hacía al hacerla.' },
         { titulo: 'Mediciones foliares', texto: 'Sube el Excel del Dualex: clorofila, flavonoles y balance de nitrógeno.' },
         { titulo: 'Análisis', texto: 'Series temporales que cruzan suelo, clima, hoja y tratamientos en el mismo eje.' },
-        { titulo: 'Equipos y permisos', texto: 'Varias parcelas y varias personas, con permisos para cada parcela.' },
-        { titulo: 'Exportación', texto: 'Libros Excel con toda la telemetría y el clima de cada lectura.' },
-        { titulo: 'Dispositivos', texto: 'Alta y baja de nodos desde la web, y cambio del intervalo de medida sin reprogramar.' },
+        { titulo: 'Acceso por invitación', texto: 'Cada persona entra invitada por quien gestiona la parcela, con permiso de gestión o de lectura.' },
+        { titulo: 'Mapa de la parcela', texto: 'Cada nodo sobre la ortofoto del PNOA, con su estado y su última lectura.' },
+        { titulo: 'Dispositivos', texto: 'Alta de nodos y cambio del intervalo de medida desde la web, y aviso cuando un nodo deja de enviar.' },
       ],
     },
     ficha: {
@@ -101,18 +133,24 @@ export const TEXTOS = {
         ['Alimentación', 'Solar'],
         ['Intervalo de medida', 'De 5 min a 24 h'],
         ['Datos climáticos', 'Open-Meteo'],
-        ['Permisos', '3 niveles por parcela'],
+        ['Cartografía', 'IGN · PNOA'],
+        ['Acceso', 'Por invitación'],
+        ['Permisos', 'Gestión o lectura, por parcela'],
         ['Exportación', 'Excel · CSV'],
       ],
     },
     equipo: {
       rotulo: 'Quiénes somos',
-      titulo: 'Gente de viña y gente de taller.',
+      titulo: 'Tres cofundadores, tres oficios.',
       texto:
-        'Viñalert nace de juntar dos oficios: el de quien cuida la viña y el de quien construye aparatos que miden. Diseñamos el hardware, escribimos el software y lo probamos en el campo.',
-      nombre: '[Nombre y apellidos]',
-      cargo: '[Cargo]',
-      linea: '[Una línea sobre su papel]',
+        'Uno construye el software, otro la electrónica que pasa el invierno en el campo y otro hace que el proyecto se sostenga. Lo diseñamos, lo programamos y lo instalamos nosotros.',
+      linkedin: 'LinkedIn',
+      linkedinDe: 'LinkedIn de',
+      personas: {
+        roi: { cargo: 'Cofundador · Software e IA', linea: 'La plataforma: la API, la web y el tratamiento de los datos.' },
+        levi: { cargo: 'Cofundador · Negocio y comunicación', linea: 'Estrategia comercial, presupuestos y la identidad de la marca.' },
+        angel: { cargo: 'Cofundador · Electrónica y firmware', linea: 'Los nodos, las sondas y la red LoRa que trabajan en el campo.' },
+      },
     },
     contacto: {
       rotulo: 'Contacto',
@@ -132,8 +170,6 @@ export const TEXTOS = {
       equipo: 'Equipo',
       contacto: 'Contacto',
       entrar: 'Iniciar sesión',
-      crear: 'Solicitar acceso',
-      asuntoAcceso: 'Solicitude de acceso a Viñalert',
       idioma: 'Idioma',
       principal: 'Seccións da páxina',
     },
@@ -141,12 +177,24 @@ export const TEXTOS = {
       rotulo: 'Viticultura de precisión',
       titulo: 'Deixa que a viña fale.',
       texto:
-        'Sondas no chan, unha rede LoRa na parcela e unha plataforma que converte cada lectura en decisións de rega, tratamentos documentados e análise agronómica.',
+        'Sondas no chan, unha rede LoRa na parcela e unha plataforma que converte cada lectura en balance hídrico, tratamentos documentados e análise agronómica.',
       demo: 'Solicitar unha demostración',
       ejemplo: 'Vista de exemplo',
-      online: 'Online',
-      inactivo: 'Inactivo',
-      pasarela: 'Pasarela',
+    },
+    corte: {
+      descripcion:
+        'Corte do chan dunha parcela de exemplo: unha cepa, as súas raíces e tres sondas a 20, 40 e 60 cm que miden a humidade, e o nodo que envía as lecturas por LoRa.',
+      humedad: 'Humidade',
+      nodo: 'Nodo N-01',
+      envio: 'Envía por LoRa · 868 MHz',
+    },
+    trayectoria: {
+      rotulo: 'Traxectoria',
+      items: [
+        { cifra: '18 sensores', texto: 'e 7 nodos no centro de investigación dunha universidade pública: a nosa primeira instalación.' },
+        { cifra: '5.000 €', texto: 'do premio Semente Ribeira Sacra, que gañamos despois de ser finalistas dúas veces.' },
+        { cifra: 'Incuba Emprende', texto: 'acompáñanos co seu programa de mentoring para proxectos emprendedores.' },
+      ],
     },
     como: {
       rotulo: 'Como funciona',
@@ -176,13 +224,13 @@ export const TEXTOS = {
       titulo: 'Todo o que pasa na parcela, nun só sitio.',
       items: [
         { titulo: 'Telemetría do chan', texto: 'Humidade e temperatura por sensor, lectura a lectura, coa hora exacta de cada unha.' },
-        { titulo: 'Clima e balance hídrico', texto: 'Condicións horarias e diarias de Open-Meteo, e a ET₀ fronte á choiva para saber cando regar.' },
+        { titulo: 'Clima e balance hídrico', texto: 'Condicións horarias e diarias, e a ET₀ fronte á choiva para seguir a auga que gaña ou perde a parcela.' },
         { titulo: 'Caderno de tratamentos', texto: 'Cada aplicación queda rexistrada co tempo que facía ao facela.' },
         { titulo: 'Medicións foliares', texto: 'Sobe o Excel do Dualex: clorofila, flavonoles e balance de nitróxeno.' },
         { titulo: 'Análise', texto: 'Series temporais que cruzan chan, clima, folla e tratamentos no mesmo eixe.' },
-        { titulo: 'Equipos e permisos', texto: 'Varias parcelas e varias persoas, con permisos para cada parcela.' },
-        { titulo: 'Exportación', texto: 'Libros Excel con toda a telemetría e o clima de cada lectura.' },
-        { titulo: 'Dispositivos', texto: 'Alta e baixa de nodos desde a web, e cambio do intervalo de medida sen reprogramar.' },
+        { titulo: 'Acceso por invitación', texto: 'Cada persoa entra invitada por quen xestiona a parcela, con permiso de xestión ou de lectura.' },
+        { titulo: 'Mapa da parcela', texto: 'Cada nodo sobre a ortofoto do PNOA, co seu estado e a súa última lectura.' },
+        { titulo: 'Dispositivos', texto: 'Alta de nodos e cambio do intervalo de medida desde a web, e aviso cando un nodo deixa de enviar.' },
       ],
     },
     ficha: {
@@ -194,18 +242,24 @@ export const TEXTOS = {
         ['Alimentación', 'Solar'],
         ['Intervalo de medida', 'De 5 min a 24 h'],
         ['Datos climáticos', 'Open-Meteo'],
-        ['Permisos', '3 niveis por parcela'],
+        ['Cartografía', 'IGN · PNOA'],
+        ['Acceso', 'Por invitación'],
+        ['Permisos', 'Xestión ou lectura, por parcela'],
         ['Exportación', 'Excel · CSV'],
       ],
     },
     equipo: {
       rotulo: 'Quen somos',
-      titulo: 'Xente de viña e xente de taller.',
+      titulo: 'Tres cofundadores, tres oficios.',
       texto:
-        'Viñalert nace de xuntar dous oficios: o de quen coida a viña e o de quen constrúe aparellos que miden. Deseñamos o hardware, escribimos o software e probámolo no campo.',
-      nombre: '[Nome e apelidos]',
-      cargo: '[Cargo]',
-      linea: '[Unha liña sobre o seu papel]',
+        'Un constrúe o software, outro a electrónica que pasa o inverno no campo e outro fai que o proxecto se sosteña. Deseñámolo, programámolo e instalámolo nós.',
+      linkedin: 'LinkedIn',
+      linkedinDe: 'LinkedIn de',
+      personas: {
+        roi: { cargo: 'Cofundador · Software e IA', linea: 'A plataforma: a API, a web e o tratamento dos datos.' },
+        levi: { cargo: 'Cofundador · Negocio e comunicación', linea: 'Estratexia comercial, orzamentos e a identidade da marca.' },
+        angel: { cargo: 'Cofundador · Electrónica e firmware', linea: 'Os nodos, as sondas e a rede LoRa que traballan no campo.' },
+      },
     },
     contacto: {
       rotulo: 'Contacto',
@@ -225,8 +279,6 @@ export const TEXTOS = {
       equipo: 'Team',
       contacto: 'Contact',
       entrar: 'Sign in',
-      crear: 'Request access',
-      asuntoAcceso: 'Viñalert access request',
       idioma: 'Language',
       principal: 'Page sections',
     },
@@ -234,12 +286,24 @@ export const TEXTOS = {
       rotulo: 'Precision viticulture',
       titulo: 'Let the vineyard speak.',
       texto:
-        'Probes in the soil, a LoRa network across the plot and a platform that turns every reading into irrigation decisions, documented treatments and agronomic analysis.',
+        'Probes in the soil, a LoRa network across the plot and a platform that turns every reading into a water balance, documented treatments and agronomic analysis.',
       demo: 'Request a demo',
       ejemplo: 'Sample view',
-      online: 'Online',
-      inactivo: 'Inactive',
-      pasarela: 'Gateway',
+    },
+    corte: {
+      descripcion:
+        'Soil cross-section of a sample plot: a vine, its roots and three probes at 20, 40 and 60 cm measuring moisture, and the node that sends the readings over LoRa.',
+      humedad: 'Moisture',
+      nodo: 'Node N-01',
+      envio: 'Sends over LoRa · 868 MHz',
+    },
+    trayectoria: {
+      rotulo: 'Track record',
+      items: [
+        { cifra: '18 sensors', texto: 'and 7 nodes at a public university research centre: our first installation.' },
+        { cifra: '€5,000', texto: 'from the Semente Ribeira Sacra award, which we won after being finalists twice.' },
+        { cifra: 'Incuba Emprende', texto: 'supports us through its mentoring programme for new ventures.' },
+      ],
     },
     como: {
       rotulo: 'How it works',
@@ -269,13 +333,13 @@ export const TEXTOS = {
       titulo: 'Everything happening on the plot, in one place.',
       items: [
         { titulo: 'Soil telemetry', texto: 'Moisture and temperature per sensor, reading by reading, each with its exact time.' },
-        { titulo: 'Weather and water balance', texto: 'Hourly and daily conditions from Open-Meteo, and ET₀ against rainfall to know when to irrigate.' },
+        { titulo: 'Weather and water balance', texto: 'Hourly and daily conditions, and ET₀ against rainfall to follow the water the plot gains or loses.' },
         { titulo: 'Treatment log', texto: 'Every application is recorded with the weather at the time it was made.' },
         { titulo: 'Foliar measurements', texto: 'Upload the Dualex spreadsheet: chlorophyll, flavonols and nitrogen balance.' },
         { titulo: 'Analysis', texto: 'Time series that overlay soil, weather, leaf and treatments on the same axis.' },
-        { titulo: 'Teams and permissions', texto: 'Several plots and several people, with permissions set for each plot.' },
-        { titulo: 'Export', texto: 'Excel workbooks with all the telemetry and the weather for every reading.' },
-        { titulo: 'Devices', texto: 'Add and remove nodes from the web, and change the sampling interval without reflashing.' },
+        { titulo: 'Invitation-only access', texto: 'Each person joins by invitation from whoever manages the plot, with manage or read-only permission.' },
+        { titulo: 'Plot map', texto: 'Every node on the PNOA orthophoto, with its status and its latest reading.' },
+        { titulo: 'Devices', texto: 'Add nodes and change the sampling interval from the web, and get warned when a node stops reporting.' },
       ],
     },
     ficha: {
@@ -287,18 +351,24 @@ export const TEXTOS = {
         ['Power', 'Solar'],
         ['Sampling interval', '5 min to 24 h'],
         ['Weather data', 'Open-Meteo'],
-        ['Permissions', '3 levels per plot'],
+        ['Maps', 'IGN · PNOA'],
+        ['Access', 'By invitation'],
+        ['Permissions', 'Manage or read, per plot'],
         ['Export', 'Excel · CSV'],
       ],
     },
     equipo: {
       rotulo: 'Who we are',
-      titulo: 'Vineyard people and workshop people.',
+      titulo: 'Three co-founders, three trades.',
       texto:
-        'Viñalert brings together two trades: looking after the vines and building instruments that measure. We design the hardware, write the software and test it in the field.',
-      nombre: '[Full name]',
-      cargo: '[Role]',
-      linea: '[One line about their part]',
+        'One builds the software, one the electronics that spend the winter in the field, and one keeps the project on its feet. We design it, program it and install it ourselves.',
+      linkedin: 'LinkedIn',
+      linkedinDe: 'LinkedIn of',
+      personas: {
+        roi: { cargo: 'Co-founder · Software and AI', linea: 'The platform: the API, the web app and the data processing.' },
+        levi: { cargo: 'Co-founder · Business and communication', linea: 'Sales strategy, budgets and the brand identity.' },
+        angel: { cargo: 'Co-founder · Electronics and firmware', linea: 'The nodes, the probes and the LoRa network working in the field.' },
+      },
     },
     contacto: {
       rotulo: 'Contact',
