@@ -12,12 +12,9 @@
  * portada/landing.test.jsx).
  */
 
-// ---------------------------------------------------------------------------
-// RELLENAR ANTES DE PUBLICAR: el correo de contacto. Se usa mientras no este
-// configurado el del titular en Administracion > Configuracion.
-// `example.com` es un dominio reservado que no pertenece a nadie.
-// ---------------------------------------------------------------------------
-export const CORREO_CONTACTO = 'contacto@example.com';
+// El correo de contacto de Viñalert (demostraciones). Si en Administracion >
+// Configuracion se rellena el email del titular, la portada usa ese.
+export const CORREO_CONTACTO = 'hortalert@gmail.com';
 
 /**
  * Los tres cofundadores. Cargo y linea van traducidos en TEXTOS[idioma].equipo.
