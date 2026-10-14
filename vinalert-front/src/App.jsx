@@ -25,6 +25,8 @@ const Foliar = lazy(() => import('./pantallas/Foliar'));
 const Analisis = lazy(() => import('./pantallas/Analisis'));
 const Administracion = lazy(() => import('./pantallas/Administracion'));
 const Invitacion = lazy(() => import('./pantallas/Invitacion'));
+const Demo = lazy(() => import('./pantallas/Demo'));
+const SalirDemo = lazy(() => import('./pantallas/Demo').then((m) => ({ default: m.SalirDemo })));
 const AvisoLegal = lazy(() => import('./pantallas/legal/AvisoLegal'));
 const Condiciones = lazy(() => import('./pantallas/legal/Condiciones'));
 const Cookies = lazy(() => import('./pantallas/legal/Cookies'));
@@ -129,6 +131,8 @@ export default function App() {
             <Route path="/recuperar" element={<Recuperar />} />
             <Route path="/restablecer" element={<Restablecer />} />
             <Route path="/invitacion" element={<Invitacion />} />
+            <Route path="/demo" element={<Demo />} />
+            <Route path="/salir-demo" element={<SalirDemo />} />
             <Route path="/aviso-legal" element={<AvisoLegal />} />
             <Route path="/privacidad" element={<Privacidad />} />
             <Route path="/cookies" element={<Cookies />} />

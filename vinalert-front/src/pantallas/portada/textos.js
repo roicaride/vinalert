@@ -69,6 +69,7 @@ export const TEXTOS = {
       texto:
         'Sondas en el suelo, una red LoRa en la parcela y una plataforma que convierte cada lectura en balance hídrico, tratamientos documentados y análisis agronómico.',
       demo: 'Solicitar una demostración',
+      verEjemplo: 'Ver una parcela de ejemplo',
       ejemplo: 'Vista de ejemplo',
     },
     corte: {
@@ -176,6 +177,7 @@ export const TEXTOS = {
       texto:
         'Sondas no chan, unha rede LoRa na parcela e unha plataforma que converte cada lectura en balance hídrico, tratamentos documentados e análise agronómica.',
       demo: 'Solicitar unha demostración',
+      verEjemplo: 'Ver unha parcela de exemplo',
       ejemplo: 'Vista de exemplo',
     },
     corte: {
@@ -283,6 +285,7 @@ export const TEXTOS = {
       texto:
         'Probes in the soil, a LoRa network across the plot and a platform that turns every reading into a water balance, documented treatments and agronomic analysis.',
       demo: 'Request a demo',
+      verEjemplo: 'See a sample plot',
       ejemplo: 'Sample view',
     },
     corte: {

@@ -1,15 +1,37 @@
 import axios from 'axios';
 
+import { modoDemo } from '../demo/modo';
+
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000';
 
 export const LLAVE_TOKEN = 'access_token';
 export const MOTIVO_CADUCADA = 'sesion_caducada';
 
+// En la parcela de ejemplo (demo/modo.js) la "sesion" es la de la demo: el
+// token real del usuario, si lo hay, sigue en localStorage sin tocarse, y
+// salir del ejemplo no le cierra la sesion de verdad.
 export const sesion = {
-  leerToken: () => localStorage.getItem(LLAVE_TOKEN),
-  guardarToken: (token) => localStorage.setItem(LLAVE_TOKEN, token),
-  limpiar: () => localStorage.removeItem(LLAVE_TOKEN),
+  leerToken: () => (modoDemo.activo() ? 'demo' : localStorage.getItem(LLAVE_TOKEN)),
+  guardarToken: (token) => {
+    modoDemo.salir();
+    localStorage.setItem(LLAVE_TOKEN, token);
+  },
+  limpiar: () => {
+    if (modoDemo.activo()) {
+      modoDemo.salir();
+      return;
+    }
+    localStorage.removeItem(LLAVE_TOKEN);
+  },
 };
+
+// Lo unico que la demo pide al servidor de verdad: los datos legales publicos.
+const SIEMPRE_AL_SERVIDOR = ['/configuracion/publica'];
+
+/** En la demo, cada peticion la responde la API del navegador (se descarga al entrar). */
+function adaptadorDemo(config) {
+  return import('../demo/api').then(({ responder }) => responder(config));
+}
 
 /**
  * A donde volver tras entrar. Solo rutas internas: "//otro.com" o
@@ -54,6 +76,9 @@ export function configurarSalidaDeSesion(fn) {
 const cliente = axios.create({ baseURL: API_BASE });
 
 cliente.interceptors.request.use((config) => {
+  if (modoDemo.activo() && !SIEMPRE_AL_SERVIDOR.some((r) => (config.url ?? '').startsWith(r))) {
+    config.adapter = adaptadorDemo;
+  }
   const token = sesion.leerToken();
   if (token) {
     config.headers = config.headers ?? {};

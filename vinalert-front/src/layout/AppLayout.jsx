@@ -7,6 +7,7 @@ import { useParcela } from '../parcela/ParcelaContext';
 import { useSesion } from '../sesion/SesionContext';
 import Boton, { Enlace } from '../ui/Boton';
 import { Marbete } from '../ui/Estados';
+import BandaDemo from '../demo/BandaDemo';
 import Navegacion from './Navegacion';
 
 /**
@@ -50,6 +51,7 @@ export default function AppLayout() {
 
   return (
     <div className="flex min-h-screen flex-col bg-lousa text-oso">
+      <BandaDemo />
       {/* ------------------------------------------------------------------ */}
       {/* Cabecera: quien eres, donde estas, y como salir.                    */}
       {/* ------------------------------------------------------------------ */}

@@ -154,9 +154,9 @@ export default function Portada() {
               <a href={correo} className={claseBoton('solido', 'lg')}>
                 {t.portada.demo}
               </a>
-              <a href="#como-funciona" className={claseBoton('fantasma', 'lg')}>
-                {t.nav.como}
-              </a>
+              <Link to="/demo" className={claseBoton('fantasma', 'lg')}>
+                {t.portada.verEjemplo}
+              </Link>
             </div>
           </div>
 

@@ -62,10 +62,10 @@ export function ProveedorSesion({ children }) {
     resolver(() => true);
   };
 
-  const cerrarSesion = () => {
+  const cerrarSesion = useCallback(() => {
     sesion.limpiar();
     setUsuario(null);
-  };
+  }, []);
 
   if (sinConexion) return <SinConexion onReintentar={reintentar} />;
 
