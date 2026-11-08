@@ -7,12 +7,6 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
-  server: {
-    allowedHosts: [
-      '57a6-78-137-136-123.ngrok-free.app',
-      '.ngrok-free.app'
-    ],
-  },
   test: {
     environment: 'jsdom',
     globals: true,
