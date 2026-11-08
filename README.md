@@ -116,9 +116,9 @@ duty cycle can be tuned from the web UI without reflashing any node.
 │   ├── vinalert_maestro/     Master node: LoRa polling, WiFi upload, flash buffer
 │   └── vinalert_esclavo/     Slave node: Modbus probes, LoRa replies, deep sleep
 ├── docs/
-│   ├── specs/ · plans/       Design specifications and implementation plans
+│   ├── FUTURAS_MEJORAS.txt   Backlog
 │   └── marca/                Brand assets
-├── migracion_*.sql           Ordered schema migrations
+├── migraciones/              Ordered SQL schema migrations
 ├── semilla_inicial.py        Seed script for a fresh database
 └── worker.py                 Runs the daily consolidation by hand
 ```
@@ -251,25 +251,25 @@ Migrations are plain SQL files applied in filename order. They are cumulative �
 existing database, apply only those added after your last deployment:
 
 ```bash
-psql "$DATABASE_URL" -f migracion_2026_08_17_historico.sql
-psql "$DATABASE_URL" -f migracion_2026_08_17_limpieza.sql
-psql "$DATABASE_URL" -f migracion_2026_08_17_log_sensores.sql
-psql "$DATABASE_URL" -f migracion_2026_08_18_cimientos.sql
-psql "$DATABASE_URL" -f migracion_2026_08_19_multiusuario.sql
-psql "$DATABASE_URL" -f migracion_2026_08_19_sensores.sql
-psql "$DATABASE_URL" -f migracion_2026_08_22_intervalo_dispositivo.sql
-psql "$DATABASE_URL" -f migracion_2026_09_18_usuarios_alta.sql
-psql "$DATABASE_URL" -f migracion_2026_09_18_quitar_riego.sql
-psql "$DATABASE_URL" -f migracion_2026_09_19_suelo_por_sensor.sql
-psql "$DATABASE_URL" -f migracion_2026_10_13_superadmin.sql
-psql "$DATABASE_URL" -f migracion_2026_10_13_cuentas.sql
-psql "$DATABASE_URL" -f migracion_2026_10_13_admin.sql
-psql "$DATABASE_URL" -f migracion_2026_10_13_lecturas_duplicadas.sql
+psql "$DATABASE_URL" -f migraciones/migracion_2026_08_17_historico.sql
+psql "$DATABASE_URL" -f migraciones/migracion_2026_08_17_limpieza.sql
+psql "$DATABASE_URL" -f migraciones/migracion_2026_08_17_log_sensores.sql
+psql "$DATABASE_URL" -f migraciones/migracion_2026_08_18_cimientos.sql
+psql "$DATABASE_URL" -f migraciones/migracion_2026_08_19_multiusuario.sql
+psql "$DATABASE_URL" -f migraciones/migracion_2026_08_19_sensores.sql
+psql "$DATABASE_URL" -f migraciones/migracion_2026_08_22_intervalo_dispositivo.sql
+psql "$DATABASE_URL" -f migraciones/migracion_2026_09_18_usuarios_alta.sql
+psql "$DATABASE_URL" -f migraciones/migracion_2026_09_18_quitar_riego.sql
+psql "$DATABASE_URL" -f migraciones/migracion_2026_09_19_suelo_por_sensor.sql
+psql "$DATABASE_URL" -f migraciones/migracion_2026_10_13_superadmin.sql
+psql "$DATABASE_URL" -f migraciones/migracion_2026_10_13_cuentas.sql
+psql "$DATABASE_URL" -f migraciones/migracion_2026_10_13_admin.sql
+psql "$DATABASE_URL" -f migraciones/migracion_2026_10_13_lecturas_duplicadas.sql
 ```
 
 Back up the database before applying migrations to a production instance.
 
-`migracion_2026_10_13_superadmin.sql` marks `admin@vinalert.dev` as the superadmin. If your
+`migraciones/migracion_2026_10_13_superadmin.sql` marks `admin@vinalert.dev` as the superadmin. If your
 administrator account uses a different email, edit the `UPDATE` before running it — the
 superadmin is no longer derived from the email, so otherwise nobody can reach the admin
 screens.
