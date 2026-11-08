@@ -200,6 +200,19 @@ sudo tailscale funnel --bg --https=8443 8080
 tailscale funnel status   # deben salir el 443 (→ 80, prod) y el 8443 (→ 8080, pre)
 ```
 
+Comprueba que el puerto de pre llega bien hasta el backend. Pide una ruta **sin barra
+final**: el backend redirige a la versión con barra, y el `Location` tiene que conservar
+el `:8443` (y el `https`):
+
+```bash
+curl -I https://NOMBRE-PC.TU-TAILNET.ts.net:8443/api/parcelas
+# HTTP/2 307
+# location: https://NOMBRE-PC.TU-TAILNET.ts.net:8443/api/parcelas/
+```
+
+Si el `location` sale sin `:8443`, el túnel no está reenviando el Host con su puerto: las
+redirecciones de pre irían a producción. No uses pre hasta arreglarlo.
+
 Funnel solo admite los puertos públicos 443, 8443 y 10000; prod usa el 443 y pre el 8443.
 En la red local, pre está en `http://IP-del-PC:8080`.
 
