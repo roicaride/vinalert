@@ -1,12 +1,26 @@
-# Viñalert en un único servidor.
+# Viñalert en un único servidor. El mismo fichero sirve para producción y
+# preproducción: cada entorno vive en su carpeta con su propio .env.
 #   docker compose up -d --build                    -> db + backend + web
 #   docker compose --profile tunnel up -d --build   -> además, Cloudflare Tunnel
-name: vinalert
+#
+# COMPOSE_PROJECT_NAME (en .env) separa los entornos: contenedores, red y
+# volumen de la BD llevan ese prefijo (vinalert_pgdata, vinalert-pre_pgdata),
+# así que levantar o reconstruir uno no toca el otro.
+name: ${COMPOSE_PROJECT_NAME:-vinalert}
+
+# Docker no limita los logs por defecto: en un portátil encendido meses
+# acabarían llenando el disco. 3 ficheros de 10 MB por contenedor.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
 
 services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
+    logging: *logging
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-vinalert}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?pon POSTGRES_PASSWORD en .env}
@@ -23,6 +37,7 @@ services:
   backend:
     build: .
     restart: unless-stopped
+    logging: *logging
     env_file: .env
     environment:
       # Sobrescribe el DATABASE_URL del .env: dentro de Docker la BD se llama "db"
@@ -34,8 +49,11 @@ services:
   web:
     build: ./vinalert-front
     restart: unless-stopped
+    logging: *logging
     ports:
-      - "80:80"          # acceso desde la red local: http://IP-del-PC
+      # Producción en el 80, preproducción en el 8080 (WEB_PORT en .env).
+      # Acceso desde la red local: http://IP-del-PC:WEB_PORT
+      - "${WEB_PORT:-80}:80"
     depends_on:
       - backend
 
@@ -43,6 +61,7 @@ services:
     image: cloudflare/cloudflared:latest
     profiles: ["tunnel"]
     restart: unless-stopped
+    logging: *logging
     command: tunnel --no-autoupdate run
     environment:
       TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}

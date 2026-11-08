@@ -1,36 +1,61 @@
-# Cada push a main se despliega en el servidor de casa en segundos.
-# Lo ejecuta un runner self-hosted instalado en ese mismo PC.
+# Despliegue automático en el servidor de casa. Lo ejecuta un runner
+# self-hosted instalado en ese mismo PC.
+#   push a main    -> producción     (/opt/vinalert,     puerto 80)
+#   push a develop -> preproducción  (/opt/vinalert-pre, puerto 8080)
 name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   workflow_dispatch:
 
+# Una cola por rama: un despliegue de pre no espera ni cancela uno de prod.
 concurrency:
-  group: deploy
+  group: deploy-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
   deploy:
+    if: github.ref_name == 'main' || github.ref_name == 'develop'
     runs-on: [self-hosted, vinalert]
+    env:
+      RAMA: ${{ github.ref_name }}
+      DIR: ${{ github.ref_name == 'main' && '/opt/vinalert' || '/opt/vinalert-pre' }}
+      PUERTO: ${{ github.ref_name == 'main' && '80' || '8080' }}
+      PROYECTO: ${{ github.ref_name == 'main' && 'vinalert' || 'vinalert-pre' }}
     steps:
-      - name: Actualizar código
-        working-directory: /opt/vinalert
+      # Si el .env del entorno no coincide con lo que espera esta rama, se para
+      # aquí: un pre mal configurado podría acabar levantándose encima de prod.
+      - name: Comprobar el .env del entorno
+        working-directory: ${{ env.DIR }}
         run: |
-          git fetch --depth 1 origin main
-          git reset --hard origin/main
+          leer() { grep -E "^$1=" .env | tail -n1 | cut -d= -f2- ; }
+          proyecto="$(leer COMPOSE_PROJECT_NAME)"; proyecto="${proyecto:-vinalert}"
+          puerto="$(leer WEB_PORT)"; puerto="${puerto:-80}"
+          if [ "$proyecto" != "$PROYECTO" ] || [ "$puerto" != "$PUERTO" ]; then
+            echo "$DIR/.env tiene COMPOSE_PROJECT_NAME=$proyecto y WEB_PORT=$puerto;"
+            echo "para la rama $RAMA tienen que ser $PROYECTO y $PUERTO."
+            exit 1
+          fi
+      - name: Actualizar código
+        working-directory: ${{ env.DIR }}
+        run: |
+          git fetch --depth 1 origin "$RAMA"
+          git reset --hard "origin/$RAMA"
       - name: Reconstruir y levantar
-        working-directory: /opt/vinalert
+        working-directory: ${{ env.DIR }}
         run: |
           PROFILES=""
           grep -q '^CLOUDFLARE_TUNNEL_TOKEN=.\+' .env && PROFILES="--profile tunnel"
           docker compose $PROFILES up -d --build --remove-orphans
           docker image prune -f
       - name: Comprobar que responde
+        working-directory: ${{ env.DIR }}
         run: |
           for i in $(seq 1 30); do
-            curl -fsS http://localhost/api/docs >/dev/null && echo "OK" && exit 0
+            curl -fsS "http://localhost:$PUERTO/api/docs" >/dev/null && echo "OK ($RAMA, puerto $PUERTO)" && exit 0
             sleep 2
           done
-          echo "El backend no responde"; docker compose -f /opt/vinalert/docker-compose.yml logs --tail 50 backend; exit 1
+          echo "El backend de $RAMA no responde en el puerto $PUERTO"
+          docker compose logs --tail 50 backend
+          exit 1

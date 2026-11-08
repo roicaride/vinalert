@@ -24,6 +24,17 @@ Navegador ─────HTTPS───┘                                      
 - nginx averigua la IP real del cliente y se la pasa al backend (`--proxy-headers`). Sin
   eso, los límites de login por IP contarían a todo el mundo como una sola persona.
 - No se mandan imágenes Docker a ningún sitio: el PC clona el repo y construye él solo.
+- En el mismo PC conviven dos entornos con el mismo `docker-compose.yml`, cada uno en su
+  carpeta y con su `.env`:
+
+  | Entorno | Rama | Carpeta | `COMPOSE_PROJECT_NAME` | `WEB_PORT` | URL pública |
+  | --- | --- | --- | --- | --- | --- |
+  | Producción | `main` | `/opt/vinalert` | `vinalert` | 80 | `https://NOMBRE-PC.TU-TAILNET.ts.net` |
+  | Preproducción | `develop` | `/opt/vinalert-pre` | `vinalert-pre` | 8080 | `https://NOMBRE-PC.TU-TAILNET.ts.net:8443` |
+
+  `COMPOSE_PROJECT_NAME` es el prefijo de contenedores, red y volumen de la BD
+  (`vinalert_pgdata` y `vinalert-pre_pgdata`): levantar o reconstruir uno no toca el otro.
+  Los pasos 1 a 6 montan producción; el 7, preproducción.
 
 ## 0. Antes de nada, en el ordenador donde está tu BD actual
 
@@ -130,10 +141,13 @@ Para validar el certificado (el firmware avisa si no lo haces), define `SERVER_R
 
 Reflashea el maestro. Como la URL ya no cambia, no vuelves a tocarlo.
 
-## 6. Despliegue automático en cada push a `main`
+## 6. Despliegue automático en cada push a `main` y `develop`
 
 `.github/workflows/deploy.yml` lo ejecuta un **runner self-hosted** que corre en el propio
-PC. GitHub le avisa al momento del push.
+PC. GitHub le avisa al momento del push. Un push a `main` despliega producción y uno a
+`develop`, preproducción. Cada rama tiene su propia cola, así que un despliegue de pre no
+espera ni cancela uno de prod. Antes de desplegar, el workflow comprueba que el `.env` de la
+carpeta tiene el `COMPOSE_PROJECT_NAME` y el `WEB_PORT` que tocan a esa rama, y para si no.
 
 1. GitHub → repo → Settings → Actions → Runners → **New self-hosted runner** → Linux x64.
 2. En el PC, ejecuta los comandos que te da (en `~/actions-runner`). En `./config.sh`,
@@ -146,13 +160,65 @@ PC. GitHub le avisa al momento del push.
    workflows* → "Require approval for all external contributors". El workflow solo se
    dispara con push a `main`; esto es una segunda barrera.
 
-Flujo: `git push` → `git reset --hard origin/main` en `/opt/vinalert` →
-`docker compose up -d --build` → comprueba que `/api/docs` responde.
+Flujo: `git push` → `git reset --hard origin/<rama>` en la carpeta del entorno →
+`docker compose up -d --build` → comprueba que `/api/docs` responde en su puerto
+(`localhost:80` en prod, `localhost:8080` en pre).
 `.env` y `backups/` están en `.gitignore`, así que el despliegue no los toca, y la BD vive en
 el volumen `pgdata`.
 
 **Las migraciones no se aplican solas.** Cuando subas una nueva, lánzala a mano
-(paso 3) justo después del push.
+(paso 3) justo después del push: primero en pre (push a `develop`) y luego en prod.
+
+## 7. Preproducción (rama `develop`)
+
+Pre es donde se prueba lo que va a salir a producción. Vive en `/opt/vinalert-pre`, con su
+propia BD, y es un entorno de usar y tirar: no lleva datos reales ni nada que dependa de él.
+
+```bash
+bash /opt/vinalert/deploy/preparar_pre.sh
+```
+
+El script clona `develop` en `/opt/vinalert-pre` y crea su `.env` así:
+
+| Variable | Valor en pre | Por qué |
+| --- | --- | --- |
+| `COMPOSE_PROJECT_NAME` | `vinalert-pre` | Contenedores y volumen de BD propios. |
+| `WEB_PORT` | `8080` | El 80 es de producción. |
+| `SECRET_KEY` | **Una nueva, distinta de la de prod** | Un token robado en pre no abre prod. **No copies la de producción.** |
+| `POSTGRES_PASSWORD` | Una nueva | |
+| `SMTP_HOST` | **Vacío** | Pre no manda correos de verdad: los enlaces de invitación y recuperación salen en `docker compose logs backend`. |
+| `SEMILLA_*_PASSWORD` | Aleatorias | Pre está publicado en internet; las contraseñas de ejemplo no valen. |
+
+Después:
+
+```bash
+cd /opt/vinalert-pre
+nano .env      # URL_WEB=https://NOMBRE-PC.TU-TAILNET.ts.net:8443
+docker compose up -d --build
+docker compose exec backend python semilla_inicial.py
+sudo tailscale funnel --bg --https=8443 8080
+tailscale funnel status   # deben salir el 443 (→ 80, prod) y el 8443 (→ 8080, pre)
+```
+
+Funnel solo admite los puertos públicos 443, 8443 y 10000; prod usa el 443 y pre el 8443.
+En la red local, pre está en `http://IP-del-PC:8080`.
+
+**Lo que pre no tiene, a propósito:**
+- **Copias programadas.** `preparar_servidor.sh` solo programa las de `/opt/vinalert`. No
+  añadas `backup_docker.sh` de pre al cron: sus datos son de prueba.
+- **ESP32.** Ningún maestro apunta a pre. El `SERVER_BASE_URL` del firmware es siempre la
+  URL de producción (paso 5). Para probar la ingesta en pre, usa `/api/docs` con un token
+  de dispositivo generado en pre.
+- **Correo.** Ver `SMTP_HOST` arriba.
+
+El scheduler de pre también consulta el clima de sus parcelas cada `CLIMA_INTERVALO_HORAS`.
+Con pocas parcelas de prueba apenas gasta cuota de Open-Meteo; si quieres que gaste aún
+menos, sube ese valor en el `.env` de pre.
+
+Para empezar pre de cero (borra su BD, no la de prod):
+```bash
+cd /opt/vinalert-pre && docker compose down -v && docker compose up -d --build
+```
 
 ## Comandos útiles
 
