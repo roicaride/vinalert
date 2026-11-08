@@ -36,8 +36,11 @@ if [ ! -f /opt/vinalert/.env ]; then
   cp /opt/vinalert/.env.example /opt/vinalert/.env
   sed -i "s|^SECRET_KEY=.*|SECRET_KEY=$(openssl rand -hex 32)|" /opt/vinalert/.env
   sed -i "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$(openssl rand -hex 16)|" /opt/vinalert/.env
+  # Prod queda publicado en internet: nada de las contraseñas de ejemplo.
+  sed -i "s|^SEMILLA_ADMIN_PASSWORD=.*|SEMILLA_ADMIN_PASSWORD=$(openssl rand -hex 12)|" /opt/vinalert/.env
+  sed -i "s|^SEMILLA_AGRICULTOR_PASSWORD=.*|SEMILLA_AGRICULTOR_PASSWORD=$(openssl rand -hex 12)|" /opt/vinalert/.env
   chmod 600 /opt/vinalert/.env
-  echo "   .env creado con SECRET_KEY y POSTGRES_PASSWORD aleatorias."
+  echo "   .env creado con SECRET_KEY, POSTGRES_PASSWORD y contraseñas de la semilla aleatorias."
   echo "   Si vas a restaurar tu BD, pon la SECRET_KEY de tu .env antiguo."
 fi
 
