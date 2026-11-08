@@ -1,0 +1,53 @@
+# Viñalert en un único servidor.
+#   docker compose up -d --build                    -> db + backend + web
+#   docker compose --profile tunnel up -d --build   -> además, Cloudflare Tunnel
+name: vinalert
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-vinalert}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?pon POSTGRES_PASSWORD en .env}
+      POSTGRES_DB: ${POSTGRES_DB:-vinalert}
+      TZ: Europe/Madrid
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Sobrescribe el DATABASE_URL del .env: dentro de Docker la BD se llama "db"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-vinalert}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-vinalert}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build: ./vinalert-front
+    restart: unless-stopped
+    ports:
+      - "80:80"          # acceso desde la red local: http://IP-del-PC
+    depends_on:
+      - backend
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    profiles: ["tunnel"]
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - web
+
+volumes:
+  pgdata:

@@ -1,0 +1,36 @@
+# Cada push a main se despliega en el servidor de casa en segundos.
+# Lo ejecuta un runner self-hosted instalado en ese mismo PC.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, vinalert]
+    steps:
+      - name: Actualizar código
+        working-directory: /opt/vinalert
+        run: |
+          git fetch --depth 1 origin main
+          git reset --hard origin/main
+      - name: Reconstruir y levantar
+        working-directory: /opt/vinalert
+        run: |
+          PROFILES=""
+          grep -q '^CLOUDFLARE_TUNNEL_TOKEN=.\+' .env && PROFILES="--profile tunnel"
+          docker compose $PROFILES up -d --build --remove-orphans
+          docker image prune -f
+      - name: Comprobar que responde
+        run: |
+          for i in $(seq 1 30); do
+            curl -fsS http://localhost/api/docs >/dev/null && echo "OK" && exit 0
+            sleep 2
+          done
+          echo "El backend no responde"; docker compose -f /opt/vinalert/docker-compose.yml logs --tail 50 backend; exit 1
