@@ -18,7 +18,9 @@ x-logging: &logging
 
 services:
   db:
-    image: postgres:16-alpine
+    # Misma versión mayor que la BD de origen (18): un dump de la 18 no se
+    # restaura en una versión anterior.
+    image: postgres:18-alpine
     restart: unless-stopped
     logging: *logging
     environment:
@@ -27,7 +29,9 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-vinalert}
       TZ: Europe/Madrid
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # Desde la imagen 18 los datos van en /var/lib/postgresql/18/docker y el
+      # volumen se monta en /var/lib/postgresql (montarlo en .../data falla).
+      - pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s

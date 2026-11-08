@@ -75,8 +75,10 @@ las 03:30.
 
 ## 3. Primer arranque
 
-**Si la versión de tu Postgres no es 16**, cambia la imagen en `docker-compose.yml`
-(`postgres:17-alpine`, etc.) **en tu repo, con commit y push**, antes del primer arranque.
+El compose usa `postgres:18-alpine`, la misma versión que la BD de origen (18.2). **Si
+algún día cambias de versión mayor**, cambia la imagen en `docker-compose.yml` **en tu repo,
+con commit y push**, y migra los datos con dump y restore: una versión mayor nueva no abre el
+volumen de la anterior.
 La de destino tiene que ser igual o mayor que la de origen.
 
 > **Regla de oro: en `/opt/vinalert` no se edita nada que esté en git.** El autodeploy hace
@@ -88,7 +90,7 @@ La de destino tiene que ser igual o mayor que la de origen.
 ```bash
 cd /opt/vinalert
 cp ~/vinalert.dump backups/              # el dump del paso 0
-docker compose up -d db
+docker compose up -d --wait db           # --wait: espera a que Postgres acepte conexiones
 docker compose exec -T db pg_restore --no-owner --no-acl -U vinalert -d vinalert < backups/vinalert.dump
 docker compose up -d --build
 ```
